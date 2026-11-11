@@ -40,6 +40,11 @@ Both write their proof into `docs/design/`.
 All four are in place as of the first upload; this is the checklist for a new
 machine.
 
+The App ID also carries the **HealthKit** capability, and the distribution
+profile was regenerated to include it. Changing app capabilities invalidates
+existing profiles, so after any capability change: edit the profile in the
+portal, save, download it again and install it.
+
 - **An Apple Distribution certificate** with its private key in the login
   keychain: `Apple Distribution: Ponti & Co, LLC (3QHJ2KN8AL)`. The key pair is
   generated locally (CSR → portal → import), so the private key never leaves

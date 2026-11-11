@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <!-- Read workouts and their routes. The app never writes to Health. -->
+  <key>com.apple.developer.healthkit</key>
+  <true/>
+  <!-- Lets the observer query wake the app when a workout is saved. -->
+  <key>com.apple.developer.healthkit.background-delivery</key>
+  <true/>
+</dict>
+</plist>

@@ -122,15 +122,19 @@ public final class FileAtlasStore: AtlasDataSource {
     public let url: URL
     /// The user's saved places, next to the snapshot.
     public let savedPlacesURL: URL
+    /// The walks that came from Health, also beside the snapshot.
+    public let healthArchiveURL: URL
+    private var baseData: AtlasData?
     private var data: AtlasData?
     private var routes: [UUID: WalkRoute] = [:]
     private var decodeTask: Task<AtlasData, Never>?
     private var saved: SavedPlaces?
 
-    public init(url: URL, savedPlacesURL: URL? = nil) {
+    public init(url: URL, savedPlacesURL: URL? = nil, healthArchiveURL: URL? = nil) {
         self.url = url
         self.savedPlacesURL = savedPlacesURL ?? url.deletingLastPathComponent()
             .appendingPathComponent("atlas-places.json")
+        self.healthArchiveURL = healthArchiveURL ?? HealthWalkArchive.url(beside: url)
     }
 
     /// Kick off the decode on a background thread. Safe to call repeatedly.
@@ -165,8 +169,23 @@ public final class FileAtlasStore: AtlasDataSource {
     }
 
     private func install(_ snapshot: AtlasData) {
-        data = snapshot
-        routes = Dictionary(snapshot.routes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        baseData = snapshot
+        applyHealthArchive()
+    }
+
+    /// Snapshot + the Health sidecar. Re-run after a sync so new walks appear
+    /// without restarting the app.
+    private func applyHealthArchive() {
+        guard let baseData else { return }
+        let health = HealthWalkArchive.load(from: healthArchiveURL)
+        let merged = health.walks.isEmpty ? baseData : baseData.merged(with: health.snapshot)
+        data = merged
+        routes = Dictionary(merged.routes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    /// Called by the Health sync once it has written the sidecar.
+    public func reloadHealthWalks() {
+        applyHealthArchive()
     }
 
     private var snapshot: AtlasData {

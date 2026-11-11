@@ -8,6 +8,7 @@
   <key>CFBundleShortVersionString</key><string>$(MARKETING_VERSION)</string>
   <key>CFBundleExecutable</key><string>$(EXECUTABLE_NAME)</string>
   <key>CFBundleIdentifier</key><string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+  <key>NSHealthShareUsageDescription</key><string>Atlas reads your workouts and their routes so the walks you have already recorded appear on your map. It never writes to Health.</string>
   <key>ITSAppUsesNonExemptEncryption</key><false/>
   <key>UILaunchScreen</key><dict/>
   <key>UISupportedInterfaceOrientations</key>

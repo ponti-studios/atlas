@@ -30,6 +30,7 @@ targets:
         INFOPLIST_FILE: iOS/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_ENTITLEMENTS: iOS/Atlas.entitlements
         # Device builds sign manually with the App Store profile, because
         # automatic signing otherwise picks the development identity. Simulator
         # builds stay automatic: they need no profile at all.

@@ -82,9 +82,28 @@ app are written to `atlas-places.json` beside it.
 
 ### Apple Health walks
 
-The Health app exports a zip whose `apple_health_export/workout-routes/` folder
-holds one GPX per route-bearing workout. On the iPhone: Health ▸ your picture ▸
-**Export All Health Data**, then AirDrop the zip to the Mac.
+The **Apple Health** row at the foot of the sidebar asks for read access and
+syncs workouts into the app. It runs on HealthKit alone — no server, no key:
+
+- Reads `HKWorkout` for walking, running, hiking and cycling, plus each
+  workout's `HKWorkoutRoute` points.
+- Writes to `atlas-health.json` beside the snapshot, so an import and a sync
+  cannot overwrite each other. The store merges the sidecar in at load and
+  again after every sync, so new walks appear without a relaunch.
+- Registers an `HKObserverQuery` and asks for **background delivery**, so a
+  workout saved on the Watch wakes the app and syncs without being opened.
+
+Background delivery needs the HealthKit entitlement *and* the
+`com.apple.developer.healthkit.background-delivery` entitlement
+(`iOS/Atlas.entitlements`), and the App ID must carry the HealthKit capability
+with the distribution profile regenerated afterwards. iOS, not the app, decides
+when a background delivery actually runs.
+
+HealthKit is device-only in practice: the simulator has no workouts, so a
+simulator sync honestly reports "0 walks synced". Test it on an iPhone.
+
+The zip route below still works for a Mac or a simulator, and is the fallback
+when Health access is not available.
 
 ```sh
 just import-health ~/Downloads/export.zip
@@ -94,7 +113,8 @@ The command accepts the zip or an already-unzipped export folder, finds the
 routes wherever they are nested, and **merges** into the existing snapshot — so
 places and flights from other exports survive, and re-importing a route updates
 it instead of duplicating it. Only workouts recorded with location have a route;
-a workout that never left the treadmill is not in the export.
+a workout that never left the treadmill is not in the export. Health's own
+export is still the way to backfill history on a Mac.
 
 Flight legs come from a transport export (`Transport.csv` + `Airports.csv`, see
 `ATLAS_TRAVEL_DIR`), and places from a places CSV (`ATLAS_PLACES_CSV`). Both are

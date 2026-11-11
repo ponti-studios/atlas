@@ -6,6 +6,8 @@ import AtlasCore
 struct ContentView: View {
     @ObservedObject var tabs: AtlasTabs
     @ObservedObject var map: MapViewModel
+    /// Present on iOS only; the Mac has no Health store to read.
+    @ObservedObject var health: HealthSyncModel
 
     @State private var reflexServer: ReflexServer?
     @State private var selection: AtlasSelection?
@@ -21,12 +23,15 @@ struct ContentView: View {
     @State private var sidebarOpen = false
     /// Live horizontal drag on the phone drawer; negative is towards closed.
     @State private var drawerDrag: CGFloat = 0
+    /// The six section tiles arrive after the drawer has landed.
+    @State private var drawerSectionsVisible = false
     @FocusState private var searchFocused: Bool
     @FocusState private var placeQueryFocused: Bool
 
-    init(tabs: AtlasTabs) {
+    init(tabs: AtlasTabs, health: HealthSyncModel = HealthSyncModel()) {
         _tabs = ObservedObject(wrappedValue: tabs)
         _map = ObservedObject(wrappedValue: tabs.map)
+        _health = ObservedObject(wrappedValue: health)
     }
 
     private var feature: AtlasFeature {
@@ -189,12 +194,18 @@ struct ContentView: View {
                 let closes = projected < -width * 0.4 || value.translation.width < -width * 0.25
                 withAnimation(.snappy(duration: 0.28)) {
                     drawerDrag = 0
-                    if closes { sidebarOpen = false }
+                    if closes {
+                        sidebarOpen = false
+                        drawerSectionsVisible = false
+                    }
                 }
             }
     }
 
     private func toggleDrawer() {
+        if sidebarOpen {
+            drawerSectionsVisible = false
+        }
         withAnimation(.snappy(duration: 0.26)) {
             drawerDrag = 0
             sidebarOpen.toggle()
@@ -224,11 +235,22 @@ struct ContentView: View {
 
     // MARK: - Sidebar
 
-    private func sidebarBody(compact: Bool) -> some View {
+    /// The drawer's content arrives after the panel has landed: the six
+    /// sections fade up a beat behind the slide, so the panel does not arrive
+    /// already full.
+    private func revealSections() async {
+        try? await Task.sleep(for: .milliseconds(250))
+        guard sidebarOpen else { return }
+        withAnimation(.easeOut(duration: 0.30)) { drawerSectionsVisible = true }
+    }
+
+    private func sidebarBody(compact: Bool, revealsSections: Bool = false) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             sidebarHeader(compact: compact)
             sectionsGrid
                 .padding(.top, 16)
+                .opacity(revealsSections ? (drawerSectionsVisible ? 1 : 0) : 1)
+                .offset(y: revealsSections && !drawerSectionsVisible ? 8 : 0)
             searchField
                 .padding(.top, 14)
             if feature == .places {
@@ -268,7 +290,7 @@ struct ContentView: View {
     /// the way a sheet sits in this design system, instead of an opaque column
     /// welded to the side of the display.
     private func drawer(width: CGFloat) -> some View {
-        sidebarBody(compact: true)
+        sidebarBody(compact: true, revealsSections: true)
             .frame(width: width)
             .frame(maxHeight: .infinity, alignment: .top)
             // Thin enough that the map reads through the panel, dark enough
@@ -289,6 +311,7 @@ struct ContentView: View {
             .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
             .padding(.vertical, 8)
             .padding(.leading, 8)
+            .task { await revealSections() }
     }
 
     private var sidebarBackground: some View {
@@ -597,8 +620,56 @@ struct ContentView: View {
                 }
                 Spacer(minLength: 0)
             }
+            if health.state != .unavailable {
+                healthRow
+                    .padding(.top, 2)
+            }
         }
         .padding(.top, 10)
+    }
+
+    /// Connect and re-sync Apple Health. The walk list is the app's reason to
+    /// exist, so the control lives with the archive status rather than behind
+    /// a settings screen that does not exist yet.
+    private var healthRow: some View {
+        Button {
+            Task { await health.activate() }
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "heart.fill")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(AtlasTheme.rose)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Apple Health")
+                        .font(.system(size: 9, weight: .semibold))
+                        .foregroundStyle(Color.white.opacity(0.78))
+                    Text(health.state.summary)
+                        .font(.system(size: 8, weight: .medium))
+                        .foregroundStyle(health.state.needsAction ? AtlasTheme.rose.opacity(0.92) : Color.white.opacity(0.38))
+                        .lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                if health.state.isBusy {
+                    ProgressView()
+                        .controlSize(.mini)
+                        .tint(AtlasTheme.rose)
+                } else {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                        .font(.system(size: 9, weight: .bold))
+                        .foregroundStyle(Color.white.opacity(0.30))
+                }
+            }
+            .padding(.horizontal, 9)
+            .padding(.vertical, 8)
+            .background(Color.white.opacity(0.045), in: RoundedRectangle(cornerRadius: 11, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .strokeBorder(Color.white.opacity(0.06), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+        .disabled(health.state.isBusy)
+        .accessibilityLabel("Sync Apple Health walks")
     }
 
     private var collapsedRail: some View {
