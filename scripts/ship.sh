@@ -30,7 +30,6 @@ BUNDLE_ID="io.ponti.atlas.ios"
 TEAM_ID="3QHJ2KN8AL"
 OUT="$ROOT/.build/testflight"
 ARCHIVE="$OUT/Atlas.xcarchive"
-APP="$ARCHIVE/Products/Applications/Atlas.app"
 EXPORT_PLIST="$ROOT/scripts/ExportOptions-testflight.plist"
 plist() { /usr/libexec/PlistBuddy -c "Print :$2" "$1/Info.plist"; }
 
@@ -62,7 +61,11 @@ ship_build() {
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" -allowProvisioningUpdates \
     CURRENT_PROJECT_VERSION="$SHIP_BUILD" archive >"$OUT/archive.log" 2>&1 \
     || { tail -25 "$OUT/archive.log" >&2; fail "Archive failed. Full log: $OUT/archive.log"; }
-  [[ -d "$APP" ]] || fail 'The archive has no Atlas.app.'
+  [[ -d "$ARCHIVE/Products/Applications" ]] || fail 'The archive has no Applications folder.'
+  # The product is named after the target ("Atlas iOS.app"); find it rather
+  # than assume a name.
+  APP="$(find "$ARCHIVE/Products/Applications" -maxdepth 1 -name '*.app' | head -1)"
+  [[ -n "$APP" ]] || fail 'The archive has no app in it.'
   SHIP_VERSION="$(plist "$APP" CFBundleShortVersionString)"
   SHIP_ARTIFACT="$ARCHIVE"
 }
@@ -78,7 +81,7 @@ ship_audit() {
     || fail 'ITSAppUsesNonExemptEncryption is not set to NO.'
   # No development signing may reach TestFlight.
   if codesign -dv --verbose=2 "$APP" 2>&1 | grep -qE 'Authority=Apple Development'; then
-    fail 'The archive is signed with a development identity.'
+    fail 'The archive is signed with a development identity. App Store Connect needs an Apple Distribution certificate: create one in Xcode (Settings > Accounts > Manage Certificates) and archive again.'
   fi
   # Nothing shaped like a key may be in the build. Atlas carries no provider
   # keys today; the check stays so a future one cannot slip in.
