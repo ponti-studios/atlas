@@ -35,6 +35,8 @@ runs edge to edge.
 - `iOS/`, `macOS/` — app entry points.
 - `TestsUITests/` — XCUITest end-to-end flows (iOS and macOS targets).
 - `maestro/` — Maestro touch flows for the simulator.
+- `scripts/ship.sh` — the TestFlight adapter for the `ship-ios` skill.
+- `.agents/skills/` — the studio skills, installed and pinned in `skills-lock.json`.
 - `docs/design/` — verified screenshots of the running app.
 
 ## Build and test
@@ -48,8 +50,15 @@ just ui-test-ios    # end-to-end: tap a camera dot, expect the monitor
 just ui-test-mac    # the same, on the desktop
 just maestro-ios    # the same, driven by touch through Maestro
 just maestro-ios-place # search Apple Maps and save a place, by touch
+just e2e            # both Maestro flows
+just testflight     # ship the iOS app to TestFlight
 just check          # everything above
 ```
+
+`just testflight` runs the studio's `ship-ios` pipeline: it archives Release
+from `project.yml`, audits the bundle, and uploads it to App Store Connect.
+The full runbook is [`docs/TESTFLIGHT.md`](docs/TESTFLIGHT.md).
+
 
 Run the macOS app from Xcode (scheme **Atlas macOS**) or open the built
 product. The iOS scheme is **Atlas iOS**.
