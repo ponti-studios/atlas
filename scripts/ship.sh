@@ -79,8 +79,12 @@ ship_audit() {
     || fail 'The archived build number is not the one this ship stamped.'
   [[ "$(plist "$APP" ITSAppUsesNonExemptEncryption)" == false ]] \
     || fail 'ITSAppUsesNonExemptEncryption is not set to NO.'
-  # No development signing may reach TestFlight.
-  if codesign -dv --verbose=2 "$APP" 2>&1 | grep -qE 'Authority=Apple Development'; then
+  # No development signing may reach TestFlight. The signature is read into a
+  # variable first: `codesign | grep -q` would trip over pipefail, because grep
+  # exits the moment it matches and codesign dies of SIGPIPE.
+  local authority
+  authority="$(codesign -dv --verbose=2 "$APP" 2>&1 || true)"
+  if grep -qE 'Authority=Apple Development' <<<"$authority"; then
     fail 'The archive is signed with a development identity. App Store Connect needs an Apple Distribution certificate: create one in Xcode (Settings > Accounts > Manage Certificates) and archive again.'
   fi
   # Nothing shaped like a key may be in the build. Atlas carries no provider
