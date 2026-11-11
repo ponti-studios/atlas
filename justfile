@@ -132,6 +132,54 @@ ui-test-mac:
     -xcrun simctl terminate booted io.ponti.atlas.ios
     xcodebuild -project {{proj}} -scheme 'Atlas macOS' -configuration Release -destination 'platform=macOS' -only-testing:AtlasMacUITests test
 
+# ---------------------------------------------------------------------------
+# Studio verbs (studio-dev): the same names in every studio repo
+# ---------------------------------------------------------------------------
+
+# Generate the Xcode project, build the core package. Safe to repeat.
+setup:
+    xcodegen generate
+    cd {{core}} && swift build
+
+# Read-only checks: what is installed, what is missing, what is running.
+doctor:
+    @echo "Xcode:"; xcodebuild -version | head -1
+    @echo "Swift:"; swift --version | head -1
+    @echo "XcodeGen:"; xcodegen --version
+    @echo "Booted simulator:"; xcrun simctl list devices booted | grep -m1 iPhone || echo "  none booted"
+    @echo "Archive snapshot:"; ls -lh "$HOME/{{datafile}}" 2>/dev/null || echo "  missing - run: just import-data"
+    @echo "Reflex port 18765:"; lsof -iTCP:18765 -sTCP:LISTEN -n -P 2>/dev/null | tail -1 || echo "  free"
+
+# Build, install and launch on the booted simulator
+sim:
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'id=B73B6E3E-BE7E-4533-8488-DEB501CC87FA' -derivedDataPath .build/dd-ios build
+    -xcrun simctl terminate booted io.ponti.atlas.ios
+    xcrun simctl install booted ".build/dd-ios/Build/Products/Release-iphonesimulator/Atlas iOS.app"
+    APP=$$(xcrun simctl get_app_container booted io.ponti.atlas.ios data); cp "$HOME/{{datafile}}" "$$APP/Documents/atlas-data.json"
+    SIMCTL_CHILD_ATLAS_REFLEX=1 xcrun simctl launch booted io.ponti.atlas.ios
+
+# End-to-end flows on the simulator
+e2e:
+    just maestro-ios
+    just maestro-ios-place
+
+# Ship the iOS app to TestFlight, the studio way (ship-ios skill)
+testflight *args:
+    bash scripts/ship.sh {{args}}
+
+# The installed skill set: version, refresh and drift check
+studio-version:
+    @cat .agents/skills/studio-dev/scripts/VERSION
+
+studio-update:
+    npx --yes skills experimental_install --yes
+
+studio-check:
+    @test -f skills-lock.json || (echo "skills-lock.json is missing" && exit 1)
+    @test -d .agents/skills/ship-ios || (echo "the ship-ios skill is not installed" && exit 1)
+    @test -d .agents/skills/studio-dev || (echo "the studio-dev skill is not installed" && exit 1)
+    @echo "skills present: ship-ios, studio-dev"
+
 # Run everything
 check: build-core test-core build-ios build-mac
     @echo "all green"

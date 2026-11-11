@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "skills": {
+    "ship-ios": {
+      "source": "ponti-studios/kernel",
+      "sourceType": "github",
+      "skillPath": "skills/ship-ios/SKILL.md",
+      "computedHash": "90083900e4b58fac20cd65fc262a58e2da74d3e7753b9cf9fd674a74155919c6"
+    },
+    "studio-dev": {
+      "source": "ponti-studios/kernel",
+      "sourceType": "github",
+      "skillPath": "skills/studio-dev/SKILL.md",
+      "computedHash": "4663598f5216bdd59fe21758bc554fa2f4f5bf2230d9b30c54641fbda6bc9060"
+    }
+  }
+}

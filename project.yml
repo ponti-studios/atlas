@@ -8,6 +8,10 @@ settings:
   base:
     SWIFT_VERSION: 6.0
     DEVELOPMENT_TEAM: 3QHJ2KN8AL
+    # The marketing version ships; the build number is stamped by the ship
+    # pipeline (a timestamp) so every upload is higher than the last.
+    MARKETING_VERSION: "1.0.0"
+    CURRENT_PROJECT_VERSION: "1"
 packages:
   AtlasCore:
     path: AtlasCore
