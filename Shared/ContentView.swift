@@ -19,6 +19,8 @@ struct ContentView: View {
     @State private var placeSearchTask: Task<Void, Never>?
     @State private var sidebarCollapsed = false
     @State private var sidebarOpen = false
+    /// Live horizontal drag on the phone drawer; negative is towards closed.
+    @State private var drawerDrag: CGFloat = 0
     @FocusState private var searchFocused: Bool
     @FocusState private var placeQueryFocused: Bool
 
@@ -98,20 +100,29 @@ struct ContentView: View {
             vignette
 
             if overlay {
-                VStack(alignment: .leading, spacing: compact ? 8 : 12) {
-                    if compact {
-                        Button(action: toggleDrawer) {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(Color.white.opacity(0.85))
-                                .frame(width: 38, height: 38)
-                                .glass(radius: 13, tint: feature.accent, strength: 0.66)
+                VStack(spacing: 0) {
+                    // Top chrome: the drawer handle sits opposite the map
+                    // controls, so the lower half of the map stays clear.
+                    HStack(alignment: .top, spacing: 10) {
+                        if compact {
+                            Button(action: toggleDrawer) {
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(Color.white.opacity(0.85))
+                                    .frame(width: 38, height: 38)
+                                    .glass(radius: 13, tint: feature.accent, strength: 0.66)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Open sidebar")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Open sidebar")
+                        Spacer(minLength: 2)
+                        controls
                     }
 
-                    HStack(alignment: .top, spacing: 10) {
+                    Spacer(minLength: 0)
+
+                    // The hero lives at the bottom, where a thumb already is.
+                    HStack(alignment: .bottom, spacing: 10) {
                         if feature == .cameras, let camera = selectedCamera {
                             CameraMonitor(
                                 camera: camera,
@@ -123,10 +134,7 @@ struct ContentView: View {
                             hero(compact: compact)
                         }
                         Spacer(minLength: 2)
-                        controls
                     }
-
-                    Spacer(minLength: 0)
                 }
                 .padding(compact ? 12 : 18)
                 #if os(macOS)
@@ -137,24 +145,60 @@ struct ContentView: View {
     }
 
     private func compactLayout(width: CGFloat) -> some View {
-        ZStack(alignment: .leading) {
+        let drawerWidth = min(340, width * 0.9)
+        // Dimming follows the finger, so a half-dragged drawer sits over a
+        // half-lit map instead of snapping.
+        let closing = min(1, max(0, -drawerDrag / max(drawerWidth, 1)))
+
+        return ZStack(alignment: .leading) {
             mapArea(compact: true, overlay: !sidebarOpen)
 
             if sidebarOpen {
-                Color.black.opacity(0.5)
+                Color.black.opacity(0.44 * (1 - closing))
                     .ignoresSafeArea()
                     .onTapGesture(perform: toggleDrawer)
                     .transition(.opacity)
 
-                sidebar(width: min(340, width * 0.9), compact: true)
+                drawer(width: drawerWidth)
                     .transition(.move(edge: .leading))
-                    .shadow(color: .black.opacity(0.6), radius: 30, x: 16)
+                    .offset(x: drawerDrag)
+                    .overlay(alignment: .trailing) {
+                        // Drag rail: the scroll view owns gestures over the
+                        // list, and a left drawer has no room to be dragged
+                        // further left from its own leading edge, so closing
+                        // by swipe lives on the panel's free edge.
+                        Color.clear
+                            .frame(width: 30)
+                            .contentShape(Rectangle())
+                            .gesture(drawerDismiss(drawerWidth))
+                    }
             }
         }
+        .sensoryFeedback(.impact(weight: .light), trigger: sidebarOpen)
+    }
+
+    /// Swipe the panel's leading edge left to dismiss it. The gesture lives on
+    /// a rail rather than the whole panel so the card list still scrolls.
+    private func drawerDismiss(_ width: CGFloat) -> some Gesture {
+        DragGesture(minimumDistance: 8)
+            .onChanged { value in
+                drawerDrag = min(0, value.translation.width)
+            }
+            .onEnded { value in
+                let projected = value.predictedEndTranslation.width
+                let closes = projected < -width * 0.4 || value.translation.width < -width * 0.25
+                withAnimation(.snappy(duration: 0.28)) {
+                    drawerDrag = 0
+                    if closes { sidebarOpen = false }
+                }
+            }
     }
 
     private func toggleDrawer() {
-        withAnimation(.snappy(duration: 0.26)) { sidebarOpen.toggle() }
+        withAnimation(.snappy(duration: 0.26)) {
+            drawerDrag = 0
+            sidebarOpen.toggle()
+        }
     }
 
 
@@ -180,7 +224,7 @@ struct ContentView: View {
 
     // MARK: - Sidebar
 
-    private func sidebar(width: CGFloat, compact: Bool) -> some View {
+    private func sidebarBody(compact: Bool) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             sidebarHeader(compact: compact)
             sectionsGrid
@@ -205,15 +249,46 @@ struct ContentView: View {
         .padding(.top, compact ? 18 : 24)
         .padding(.bottom, 14)
         #endif
-        .frame(width: width)
-        .frame(maxHeight: .infinity, alignment: .top)
-        .background(sidebarBackground)
-        .overlay(alignment: .trailing) {
-            Rectangle()
-                .fill(AtlasTheme.hairline)
-                .frame(width: 1)
-                .ignoresSafeArea(edges: .vertical)
-        }
+    }
+
+    private func sidebar(width: CGFloat, compact: Bool) -> some View {
+        sidebarBody(compact: compact)
+            .frame(width: width)
+            .frame(maxHeight: .infinity, alignment: .top)
+            .background(sidebarBackground)
+            .overlay(alignment: .trailing) {
+                Rectangle()
+                    .fill(AtlasTheme.hairline)
+                    .frame(width: 1)
+                    .ignoresSafeArea(edges: .vertical)
+            }
+    }
+
+    /// The phone drawer. A floating glass panel inset from the screen edges,
+    /// the way a sheet sits in this design system, instead of an opaque column
+    /// welded to the side of the display.
+    private func drawer(width: CGFloat) -> some View {
+        sidebarBody(compact: true)
+            .frame(width: width)
+            .frame(maxHeight: .infinity, alignment: .top)
+            // Thin enough that the map reads through the panel, dark enough
+            // that 11pt body text stays legible over it.
+            .glass(radius: 30, tint: feature.accent, strength: 0.44)
+            .overlay(alignment: .top) {
+                // A sheen along the top edge: the cue that says glass rather
+                // than a dark rectangle.
+                LinearGradient(
+                    colors: [Color.white.opacity(0.07), .clear],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                .frame(height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+                .allowsHitTesting(false)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .padding(.vertical, 8)
+            .padding(.leading, 8)
     }
 
     private var sidebarBackground: some View {
