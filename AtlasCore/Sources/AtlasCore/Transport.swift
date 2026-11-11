@@ -19,8 +19,14 @@ public final class ReflexServer {
 
     public func start() {
         do {
-            let params = NWParameters.tcp
             let port = self.port
+            let params = NWParameters.tcp
+            // Loopback only. The debug server has no authentication, so it must
+            // never be reachable from the network the Mac or simulator is on.
+            params.requiredLocalEndpoint = NWEndpoint.hostPort(
+                host: "127.0.0.1",
+                port: NWEndpoint.Port(rawValue: port)!
+            )
             let listener = try NWListener(using: params, on: NWEndpoint.Port(rawValue: port)!)
             listener.newConnectionHandler = { [weak self] conn in
                 Task { @MainActor in self?.handle(conn) }

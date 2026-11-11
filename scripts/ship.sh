@@ -35,12 +35,20 @@ plist() { /usr/libexec/PlistBuddy -c "Print :$2" "$1/Info.plist"; }
 
 # App Store Connect authentication. Xcode's own account session expires and
 # then the upload dies with "Your session has expired", so the ship uses an API
-# key instead: an Admin key stored outside the repository in $ATLAS_ASC_KEY_DIR.
+# key instead. The key and its identifiers live outside the repository: this
+# script reads them from the environment, or from ~/.atlas-ship.env when it
+# exists. Nothing about the account is committed here.
+ATLAS_SHIP_ENV="${ATLAS_SHIP_ENV:-$HOME/.atlas-ship.env}"
+if [[ -f "$ATLAS_SHIP_ENV" ]]; then
+  # shellcheck disable=SC1090  # the file is the user's local config
+  set -a; source "$ATLAS_SHIP_ENV"; set +a
+fi
 ASC_KEY_DIR="${ATLAS_ASC_KEY_DIR:-$HOME/ASC_KEY_DIR}"
-ASC_KEY_ID="${ATLAS_ASC_KEY_ID:-REDACTED-KEY-ID}"
-ASC_ISSUER_ID="${ATLAS_ASC_ISSUER_ID:-REDACTED-ISSUER-ID}"
+ASC_KEY_ID="${ATLAS_ASC_KEY_ID:-}"
+ASC_ISSUER_ID="${ATLAS_ASC_ISSUER_ID:-}"
 ASC_ARGS=()
-if [[ -f "$ASC_KEY_DIR/AuthKey_$ASC_KEY_ID.p8" ]]; then
+asc_ready() { [[ -n "$ASC_KEY_ID" && -n "$ASC_ISSUER_ID" && -f "$ASC_KEY_DIR/AuthKey_$ASC_KEY_ID.p8" ]]; }
+if asc_ready; then
   ASC_ARGS=(-authenticationKeyPath "$ASC_KEY_DIR/AuthKey_$ASC_KEY_ID.p8"
             -authenticationKeyID "$ASC_KEY_ID"
             -authenticationKeyIssuerID "$ASC_ISSUER_ID")
@@ -119,6 +127,7 @@ ship_symbols() {
 }
 
 ship_upload() {
+  asc_ready || fail "No App Store Connect key configured. Set ATLAS_ASC_KEY_ID and ATLAS_ASC_ISSUER_ID and put AuthKey_<id>.p8 in $ASC_KEY_DIR, or list the three in $ATLAS_SHIP_ENV."
   # Export with the upload destination, which sends the build to App Store
   # Connect. The API key authenticates the upload, so the pipeline does not
   # depend on a live Xcode account session.

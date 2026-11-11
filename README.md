@@ -247,18 +247,19 @@ Every active tab node also carries the current map camera as `context`, so an
 agent can read the viewport from any feature.
 
 ## Screenshots
-- `docs/design/macos-sidebar-walks.png`, `macos-sidebar-cameras.png`,
-  `macos-sidebar-search.png` — desktop sidebar, real archive
+- `docs/design/macos-sidebar-cameras.png`, `macos-sidebar-search.png` — desktop sidebar
 - `docs/design/ios-sidebar-map.png`, `ios-sidebar-drawer.png` — iPhone map and drawer
-- `docs/design/macos-walks.png`, `macos-places.png`, `macos-flights.png`,
-  `macos-tfl.png`, `macos-3d.png` — desktop sections, real archive
+- `docs/design/macos-tfl.png` — desktop, the TfL network
 - `docs/design/macos-cameras.png`, `macos-camera-live.png` — desktop, live TfL camera
-- `docs/design/ios-walks.png`, `real-places.png`, `real-flights.png`,
-  `ios-tfl.png`, `real-3d.png` — iPhone sections, real archive
+- `docs/design/ios-tfl.png` — iPhone, the TfL network
 - `docs/design/real-cameras.png`, `real-camera-live.png` — iPhone, live TfL camera
 - `docs/design/ios-camera-street.png` — iPhone, street-level cameras as individual dots
 - `docs/design/maestro-camera-tap.png` — iPhone, the monitor reopened by tapping a dot
 - `docs/design/maestro-place-search.png` — iPhone, a place searched in Apple Maps and saved
 - `docs/design/maestro-place-results.png` — iPhone, Apple's search results with the save control
-- `docs/design/map-base.png`, `places.png`, `flights.png`, `tfl.png`,
-  `walks-3d.png` — earlier bottom-dock layout (historical)
+- `docs/design/map-base.png` — the dark Apple Maps base layer
+
+Captures of the walks, places and flights sections come from a real personal
+archive — a home neighbourhood, GPS routes and a flight itinerary — so they are
+deliberately **not** published. Run the app against your own archive to see
+those sections; `just e2e` regenerates the camera and place-search proofs.

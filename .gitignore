@@ -15,3 +15,25 @@ AtlasCore/.build/
 
 # macOS
 .DS_Store
+
+# Signing material never belongs in the repository: keys, certificates,
+# provisioning profiles and the App Store Connect key live outside it.
+*.p8
+*.p12
+*.pfx
+*.mobileprovision
+*.provisionprofile
+AuthKey_*.p8
+Apple*.cer
+
+# Credentials and local configuration
+.env
+.env.*
+.atlas-ship.env
+*.localrc
+secrets.*
+credentials.*
+
+# Local archives and captures
+capture/
+*.xcactivitylog

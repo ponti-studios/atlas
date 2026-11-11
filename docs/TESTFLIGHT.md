@@ -53,12 +53,12 @@ machine.
 - **An App Store Connect app record** for `io.ponti.atlas.ios` (the public name
   is *Atlas Geo Archive* — plain *Atlas* is taken on the App Store), with the
   marketing version from `project.yml` (`MARKETING_VERSION`).
-- **An App Store Connect API key** with the Admin role, at
-  `$ATLAS_ASC_KEY_DIR/AuthKey_REDACTED-KEY-ID.p8` (issuer
-  `REDACTED-ISSUER-ID`). The key lives outside the repository
-  and is never committed. `scripts/ship.sh` reads it from
-  `$ATLAS_ASC_KEY_DIR`, and `$ATLAS_ASC_KEY_ID` / `$ATLAS_ASC_ISSUER_ID`
-  override the defaults.
+- **An App Store Connect API key** with the Admin role. The key and its
+  identifiers live outside the repository: `scripts/ship.sh` reads
+  `ATLAS_ASC_KEY_ID`, `ATLAS_ASC_ISSUER_ID` and `ATLAS_ASC_KEY_DIR` from the
+  environment, or from `~/.atlas-ship.env` when that file exists (mode 600).
+  Without them the upload stops with an explicit error instead of falling back
+  to Xcode's account session, which expires.
 
 Do not fall back to Xcode's account session for the upload: it expires and the
 export then fails with *"Your session has expired. Please log in."*
