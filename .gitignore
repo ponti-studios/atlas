@@ -37,3 +37,7 @@ credentials.*
 # Local archives and captures
 capture/
 *.xcactivitylog
+
+# Installed skills: pinned in skills-lock.json and installed locally, so the
+# repository does not vendor other projects' adapter notes.
+.agents/skills/

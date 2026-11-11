@@ -1,7 +1,7 @@
 import Foundation
 import CoreLocation
 
-// MARK: - Walks (ported from an earlier tracker)
+// MARK: - Walks
 
 public struct WalkRoute: Identifiable, Codable, Hashable, Sendable {
     public let id: UUID

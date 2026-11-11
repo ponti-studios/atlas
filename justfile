@@ -41,19 +41,21 @@ cams:
 # Real data
 # ---------------------------------------------------------------------------
 
-# Newest personal-data export (contains app__places.csv)
-personal-data := `ls -td "$HOME/Documents/data/personal-data -- export -- "* 2>/dev/null | head -1`
-travel := "Documents/data/_data/travel-data/travel-export-package"
+# Personal exports. Every path is overridable, so the repository carries no
+# assumption about where your own data lives.
+places_csv := env_var_or_default("ATLAS_PLACES_CSV", env_var_or_default("HOME", "") + "/Documents/data/places.csv")
+gpx_dir := env_var_or_default("ATLAS_GPX_DIR", env_var_or_default("HOME", "") + "/Documents/data/gpx_routes")
+travel := env_var_or_default("ATLAS_TRAVEL_DIR", env_var_or_default("HOME", "") + "/Documents/data/travel-export-package")
 datafile := "Library/Application Support/Atlas/atlas-data.json"
 
 # Import real GPX routes, places, and flights into the app snapshot
 import-data:
     cd {{core}} && swift build
     cd {{core}} && .build/debug/atlas-cli import \
-        --gpx "$HOME/Documents/data/gpx_routes" \
-        --places "{{personal-data}}/app__places.csv" \
-        --transport "$HOME/{{travel}}/Transport.csv" \
-        --airports "$HOME/{{travel}}/Airports.csv" \
+        --gpx "{{gpx_dir}}" \
+        --places "{{places_csv}}" \
+        --transport "{{travel}}/Transport.csv" \
+        --airports "{{travel}}/Airports.csv" \
         --out "$HOME/{{datafile}}"
 
 # Inspect the imported snapshot
@@ -104,11 +106,11 @@ run-mac:
 
 # Run iOS unit tests
 test-ios:
-    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -destination 'id=B73B6E3E-BE7E-4533-8488-DEB501CC87FA' -only-testing:AtlasTests test
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:AtlasTests test
 
 # End-to-end: tap a camera dot, expect its monitor (needs the live TfL feed)
 ui-test-ios:
-    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'id=B73B6E3E-BE7E-4533-8488-DEB501CC87FA' -only-testing:AtlasUITests test
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:AtlasUITests test
 
 # Maestro flow: drive the app by touch on the booted simulator
 maestro-ios:
@@ -138,6 +140,9 @@ ui-test-mac:
 
 # Generate the Xcode project, build the core package. Safe to repeat.
 setup:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [[ -d .agents/skills/ship-ios ]] || npx --yes skills experimental_install --yes
     xcodegen generate
     cd {{core}} && swift build
 
@@ -152,7 +157,7 @@ doctor:
 
 # Build, install and launch on the booted simulator
 sim:
-    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'id=B73B6E3E-BE7E-4533-8488-DEB501CC87FA' -derivedDataPath .build/dd-ios build
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath .build/dd-ios build
     -xcrun simctl terminate booted io.ponti.atlas.ios
     xcrun simctl install booted ".build/dd-ios/Build/Products/Release-iphonesimulator/Atlas iOS.app"
     APP=$$(xcrun simctl get_app_container booted io.ponti.atlas.ios data); cp "$HOME/{{datafile}}" "$$APP/Documents/atlas-data.json"

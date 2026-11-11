@@ -79,6 +79,7 @@ group can install.
 
 - The Xcode project is generated from `project.yml` and is gitignored: a fresh
   checkout runs `just setup` (or `just gen`) before it builds.
-- The skills are project-installed and pinned: `skills-lock.json` holds
-  `ship-ios` and `studio-dev` under `.agents/skills/`. `just studio-update`
-  restores the locked set; `just studio-check` fails when a skill is missing.
+- The skills are pinned in `skills-lock.json` and installed locally by
+  `just setup`; the installed copies are gitignored, so the repository does not
+  vendor other projects' adapter notes. `just studio-update` restores the
+  locked set; `just studio-check` fails when a skill is missing.

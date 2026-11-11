@@ -36,7 +36,7 @@ runs edge to edge.
 - `TestsUITests/` — XCUITest end-to-end flows (iOS and macOS targets).
 - `maestro/` — Maestro touch flows for the simulator.
 - `scripts/ship.sh` — the TestFlight adapter for the `ship-ios` skill.
-- `.agents/skills/` — the studio skills, installed and pinned in `skills-lock.json`.
+- `.agents/skills/` — the studio skills, installed locally from `skills-lock.json` (`just setup`).
 - `docs/design/` — verified screenshots of the running app.
 
 ## Build and test
