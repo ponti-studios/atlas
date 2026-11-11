@@ -1,0 +1,80 @@
+{
+  "counters" : {
+    "frames.probes" : 1,
+    "loads.tabs" : 1,
+    "routes.loaded" : 92,
+    "ui.arcs" : 114,
+    "ui.cards.items" : 11552,
+    "ui.places.visible" : 600,
+    "ui.polylines" : 1840
+  },
+  "footprintBytes" : 557632176,
+  "frames" : {
+    "durationMS" : 13126.151833334006,
+    "fps" : 44.71988496348999,
+    "frames" : 587,
+    "maxMS" : 757.978166686371,
+    "overBudgetFrames" : 94,
+    "overBudgetPercent" : 16.013628620102214,
+    "p50MS" : 16.666666720993817,
+    "p95MS" : 41.097833309322596,
+    "p99MS" : 82.4816667009145,
+    "targetMS" : 16.666666604578495
+  },
+  "metrics" : [
+    {
+      "count" : 36,
+      "max" : 5.8255,
+      "mean" : 1.083712972222222,
+      "median" : 0.480709,
+      "min" : 0.001208,
+      "name" : "ui.cards.build",
+      "p95" : 5.195083,
+      "unit" : "ms"
+    },
+    {
+      "count" : 3,
+      "max" : 0.324625,
+      "mean" : 0.26322233333333334,
+      "median" : 0.256875,
+      "min" : 0.208167,
+      "name" : "ui.flight.arcs",
+      "p95" : 0.324625,
+      "unit" : "ms"
+    },
+    {
+      "count" : 3,
+      "max" : 3.754333,
+      "mean" : 3.10775,
+      "median" : 2.792125,
+      "min" : 2.776792,
+      "name" : "ui.places.cull",
+      "p95" : 3.754333,
+      "unit" : "ms"
+    },
+    {
+      "count" : 13,
+      "max" : 1.353,
+      "mean" : 0.4122050769230769,
+      "median" : 0.4345,
+      "min" : 0.000792,
+      "name" : "ui.walk.sort",
+      "p95" : 0.506791,
+      "unit" : "ms"
+    }
+  ],
+  "sampled" : true,
+  "stagesMS" : {
+    "app.ready" : 1831.987834,
+    "map.appeared" : 1660.718292,
+    "process.start" : 4.580042,
+    "routes.prepare" : 5.023,
+    "routes.ready" : 2027.772125,
+    "snapshot.decode" : 170.496583,
+    "snapshot.decoded" : 1825.462917,
+    "store.ready" : 1825.664875,
+    "tabs.load" : 177.041667,
+    "tabs.ready" : 1831.983042,
+    "walks.summaries" : 1829.26775
+  }
+}

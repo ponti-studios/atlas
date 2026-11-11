@@ -1,0 +1,17 @@
+# Build products
+.build/
+DerivedData/
+*.xcarchive
+*.ipa
+*.dSYM
+*.xcresult
+
+# The Xcode project is generated from project.yml — run `just gen`
+Atlas.xcodeproj/
+
+# SwiftPM
+.swiftpm/
+AtlasCore/.build/
+
+# macOS
+.DS_Store

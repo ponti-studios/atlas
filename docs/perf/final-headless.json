@@ -1,0 +1,204 @@
+{
+  "flights" : 38,
+  "footprintBytes" : 33604136,
+  "generatedAt" : "2026-11-09T18:14:05Z",
+  "label" : "final",
+  "metrics" : [
+    {
+      "count" : 5,
+      "max" : 0.321417,
+      "mean" : 0.12180840000000001,
+      "median" : 0.0675,
+      "min" : 0.062416,
+      "name" : "snapshot.read",
+      "p95" : 0.321417,
+      "unit" : "ms"
+    },
+    {
+      "count" : 5,
+      "max" : 11.710708,
+      "mean" : 9.323524999999998,
+      "median" : 8.84625,
+      "min" : 7.206542,
+      "name" : "snapshot.decode",
+      "p95" : 11.710708,
+      "unit" : "ms"
+    },
+    {
+      "count" : 5,
+      "max" : 7.205208,
+      "mean" : 7.10125,
+      "median" : 7.162792,
+      "min" : 6.981625,
+      "name" : "snapshot.load",
+      "p95" : 7.205208,
+      "unit" : "ms"
+    },
+    {
+      "count" : 2,
+      "max" : 9.153666,
+      "mean" : 9.054416499999999,
+      "median" : 9.153666,
+      "min" : 8.955167,
+      "name" : "snapshot.encode",
+      "p95" : 9.153666,
+      "unit" : "ms"
+    },
+    {
+      "count" : 5,
+      "max" : 0.019875,
+      "mean" : 0.012917000000000001,
+      "median" : 0.011209,
+      "min" : 0.011,
+      "name" : "store.index",
+      "p95" : 0.019875,
+      "unit" : "ms"
+    },
+    {
+      "count" : 5,
+      "max" : 5.518458,
+      "mean" : 1.5074999999999998,
+      "median" : 0.50475,
+      "min" : 0.489208,
+      "name" : "tabs.load.hot",
+      "p95" : 5.518458,
+      "unit" : "ms"
+    },
+    {
+      "count" : 2,
+      "max" : 7.901708,
+      "mean" : 7.832875,
+      "median" : 7.901708,
+      "min" : 7.764042,
+      "name" : "tabs.load.cold",
+      "p95" : 7.901708,
+      "unit" : "ms"
+    },
+    {
+      "count" : 5,
+      "max" : 0.236917,
+      "mean" : 0.23327500000000004,
+      "median" : 0.231458,
+      "min" : 0.23125,
+      "name" : "walks.months",
+      "p95" : 0.236917,
+      "unit" : "ms"
+    },
+    {
+      "count" : 10,
+      "max" : 0.010666,
+      "mean" : 0.0095959,
+      "median" : 0.0095,
+      "min" : 0.009375,
+      "name" : "walks.page",
+      "p95" : 0.010666,
+      "unit" : "ms"
+    },
+    {
+      "count" : 10,
+      "max" : 4.629916,
+      "mean" : 4.4875375,
+      "median" : 4.501458,
+      "min" : 4.323958,
+      "name" : "routes.prepare",
+      "p95" : 4.629916,
+      "unit" : "ms"
+    },
+    {
+      "count" : 10,
+      "max" : 1.9555,
+      "mean" : 1.8093792,
+      "median" : 1.778333,
+      "min" : 1.754792,
+      "name" : "routes.simplify",
+      "p95" : 1.9555,
+      "unit" : "ms"
+    },
+    {
+      "count" : 20,
+      "max" : 0.942708,
+      "mean" : 0.8389146000000001,
+      "median" : 0.828,
+      "min" : 0.820417,
+      "name" : "places.cull.city",
+      "p95" : 0.890667,
+      "unit" : "ms"
+    },
+    {
+      "count" : 20,
+      "max" : 0.920792,
+      "mean" : 0.85721875,
+      "median" : 0.858833,
+      "min" : 0.821083,
+      "name" : "places.cull.metro",
+      "p95" : 0.900542,
+      "unit" : "ms"
+    },
+    {
+      "count" : 20,
+      "max" : 3.4215,
+      "mean" : 1.1966604,
+      "median" : 0.923417,
+      "min" : 0.824417,
+      "name" : "places.cull.world",
+      "p95" : 2.454667,
+      "unit" : "ms"
+    },
+    {
+      "count" : 20,
+      "max" : 0.483833,
+      "mean" : 0.14295205000000002,
+      "median" : 0.101959,
+      "min" : 0.098208,
+      "name" : "flights.arcs",
+      "p95" : 0.333583,
+      "unit" : "ms"
+    },
+    {
+      "count" : 20,
+      "max" : 0.041667,
+      "mean" : 0.007187450000000002,
+      "median" : 0.004292,
+      "min" : 0.004167,
+      "name" : "camera.fit.route",
+      "p95" : 0.021791,
+      "unit" : "ms"
+    },
+    {
+      "count" : 10,
+      "max" : 1.521084,
+      "mean" : 0.41101259999999995,
+      "median" : 0.294667,
+      "min" : 0.209875,
+      "name" : "cards.walks",
+      "p95" : 1.521084,
+      "unit" : "ms"
+    },
+    {
+      "count" : 10,
+      "max" : 3.566125,
+      "mean" : 2.8335917999999998,
+      "median" : 2.773167,
+      "min" : 2.566917,
+      "name" : "cards.places",
+      "p95" : 3.566125,
+      "unit" : "ms"
+    },
+    {
+      "count" : 20,
+      "max" : 0.246875,
+      "mean" : 0.06473749999999999,
+      "median" : 0.055167,
+      "min" : 0.054666,
+      "name" : "cards.flights",
+      "p95" : 0.055958,
+      "unit" : "ms"
+    }
+  ],
+  "places" : 1407,
+  "points" : 87682,
+  "routes" : 92,
+  "snapshotBytes" : 1257323,
+  "snapshotPath" : "\/Users\/charlesponti\/Library\/Application Support\/Atlas\/atlas-data.json",
+  "walks" : 92
+}

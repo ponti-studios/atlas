@@ -1,0 +1,83 @@
+{
+  "counters" : {
+    "frames.probes" : 4,
+    "loads.tabs" : 1,
+    "routes.loaded" : 92,
+    "routes.overview.points" : 4514,
+    "ui.arcs" : 38,
+    "ui.cards.items" : 12036,
+    "ui.cards.rebuilds" : 27,
+    "ui.places.visible" : 4660,
+    "ui.route.vertices" : 4514,
+    "ui.routes.visible" : 92
+  },
+  "footprintBytes" : 324274672,
+  "frames" : {
+    "durationMS" : 17087.768916622736,
+    "fps" : 58.81399759698005,
+    "frames" : 1005,
+    "maxMS" : 65.85391669068485,
+    "overBudgetFrames" : 11,
+    "overBudgetPercent" : 1.0945273631840795,
+    "p50MS" : 16.666666720993817,
+    "p95MS" : 16.666666720993817,
+    "p99MS" : 28.335416689515114,
+    "targetMS" : 16.666666604578495
+  },
+  "metrics" : [
+    {
+      "count" : 27,
+      "max" : 7.794,
+      "mean" : 2.066591111111111,
+      "median" : 0.519167,
+      "min" : 0.0025,
+      "name" : "ui.cards.build",
+      "p95" : 7.460125,
+      "unit" : "ms"
+    },
+    {
+      "count" : 2,
+      "max" : 0.228042,
+      "mean" : 0.11491699999999999,
+      "median" : 0.228042,
+      "min" : 0.001792,
+      "name" : "ui.flight.arcs",
+      "p95" : 0.228042,
+      "unit" : "ms"
+    },
+    {
+      "count" : 69,
+      "max" : 7.946459,
+      "mean" : 3.8569981594202902,
+      "median" : 3.576042,
+      "min" : 0.003791,
+      "name" : "ui.places.cull",
+      "p95" : 5.991208,
+      "unit" : "ms"
+    },
+    {
+      "count" : 2,
+      "max" : 0.313416,
+      "mean" : 0.169479,
+      "median" : 0.313416,
+      "min" : 0.025542,
+      "name" : "ui.routes.build",
+      "p95" : 0.313416,
+      "unit" : "ms"
+    }
+  ],
+  "sampled" : true,
+  "stagesMS" : {
+    "app.ready" : 4142.189542,
+    "map.appeared" : 3407.07975,
+    "process.start" : 4.498209,
+    "routes.prepare" : 7.7355,
+    "routes.ready" : 4040.272417,
+    "snapshot.decode" : 13.522334,
+    "snapshot.decoded" : 20.268875,
+    "store.ready" : 3963.152875,
+    "tabs.load" : 3.295042,
+    "tabs.ready" : 4141.583334,
+    "walks.summaries" : 3965.8465
+  }
+}

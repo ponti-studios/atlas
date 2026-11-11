@@ -1,0 +1,21 @@
+appId: io.ponti.atlas.ios
+---
+# Drive the app the way a person does: open the drawer, find a camera, let it
+# centre itself, dismiss the card, then tap the dot on the map and expect the
+# monitor to come back. Needs the live TfL feed.
+- launchApp
+- tapOn: "Open sidebar"
+- tapOn: "Cameras"
+- tapOn: "Search cameras"
+- inputText: "Bermondsey"
+- tapOn: "Tooley St/Bermondsey St"
+- assertVisible: "Close camera"
+- tapOn: "Locate camera"
+- assertVisible: "Close camera"
+- tapOn: "Close camera"
+- assertNotVisible: "Close camera"
+- tapOn:
+    point: "50%,50%"
+- assertVisible: "Close camera"
+- assertVisible: "Tooley St/Bermondsey St"
+- takeScreenshot: docs/design/maestro-camera-tap

@@ -1,0 +1,19 @@
+appId: io.ponti.atlas.ios
+---
+# Search Apple Maps for a place and save it. Needs the live search service.
+# The saved place ends up in the Places list with its coordinates, which is
+# what the last assertion checks — the results list shows an address instead.
+- launchApp
+- tapOn: "Open sidebar"
+- tapOn: "Places"
+- tapOn: "Search Apple Maps"
+- inputText: "Eiffel Tower"
+- assertVisible: ".*Avenue Anatole France.*"
+- takeScreenshot: docs/design/maestro-place-results
+- tapOn:
+    id: "atlas.savePlace"
+- tapOn: "Clear place search"
+- tapOn: "Search places"
+- inputText: "Eiffel"
+- assertVisible: "48.858, 2.294"
+- takeScreenshot: docs/design/maestro-place-search
