@@ -33,18 +33,35 @@ Both write their proof into `docs/design/`.
 | Build | `scripts/ship.sh` generates the Xcode project from `project.yml`, archives Release for `generic/platform=iOS`, and stamps a timestamp build number (`date +%y%m%d%H%M`), so every upload is higher than the last. |
 | Audit | The bundle is `io.ponti.atlas.ios`, the archived build number is the one this ship stamped, `ITSAppUsesNonExemptEncryption` is NO, the archive is **not** signed with a development identity, and nothing shaped like a secret key is in the app. A failed audit is a hard stop. |
 | Symbols | Atlas has no crash reporter yet, so its dSYMs ride along with the archive upload (`uploadSymbols` in `scripts/ExportOptions-testflight.plist`). |
-| Upload | `xcodebuild -exportArchive` with the upload destination. Xcode must be signed in, or an App Store Connect API key must be available. |
+| Upload | `xcodebuild -exportArchive` with the upload destination. Exports sign manually against the installed `Atlas iOS Distribution` profile; the upload authenticates with the App Store Connect API key (below). |
 
 ## What it needs on this machine
 
-- **An Apple Distribution certificate.** The keychain holds only
-  `Apple Development` and a macOS `Developer ID` certificate, so the archive
-  comes out development-signed and the audit stops. Create the distribution
-  certificate in Xcode (Settings ▸ Accounts ▸ Manage Certificates ▸ Apple
-  Distribution) and archive again.
-- **An App Store Connect app record** for `io.ponti.atlas.ios`, with the
+All four are in place as of the first upload; this is the checklist for a new
+machine.
+
+- **An Apple Distribution certificate** with its private key in the login
+  keychain: `Apple Distribution: Ponti & Co, LLC (3QHJ2KN8AL)`. The key pair is
+  generated locally (CSR → portal → import), so the private key never leaves
+  the machine; a backup of the key, the CSR and the issued certificate lives in
+  `~/Downloads/atlas-signing/`.
+- **The App Store provisioning profile** `Atlas iOS Distribution`
+  (`3QHJ2KN8AL.io.ponti.atlas.ios`, App Store type), installed into
+  `~/Library/MobileDevice/Provisioning Profiles/`. Device builds sign with it
+  manually (`CODE_SIGN_IDENTITY[sdk=iphoneos*]` in `project.yml`); simulator
+  builds stay automatic because they need no profile.
+- **An App Store Connect app record** for `io.ponti.atlas.ios` (the public name
+  is *Atlas Geo Archive* — plain *Atlas* is taken on the App Store), with the
   marketing version from `project.yml` (`MARKETING_VERSION`).
-- **A signed-in Xcode account**, or an App Store Connect API key.
+- **An App Store Connect API key** with the Admin role, at
+  `$ATLAS_ASC_KEY_DIR/AuthKey_REDACTED-KEY-ID.p8` (issuer
+  `REDACTED-ISSUER-ID`). The key lives outside the repository
+  and is never committed. `scripts/ship.sh` reads it from
+  `$ATLAS_ASC_KEY_DIR`, and `$ATLAS_ASC_KEY_ID` / `$ATLAS_ASC_ISSUER_ID`
+  override the defaults.
+
+Do not fall back to Xcode's account session for the upload: it expires and the
+export then fails with *"Your session has expired. Please log in."*
 
 ## The Mac app
 
