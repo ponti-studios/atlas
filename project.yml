@@ -29,6 +29,7 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: io.ponti.atlas.ios
         INFOPLIST_FILE: iOS/Info.plist
         TARGETED_DEVICE_FAMILY: "1,2"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
       testTargets:
         - AtlasTests
@@ -45,6 +46,7 @@ targets:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: io.ponti.atlas.macos
         INFOPLIST_FILE: macOS/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
       testTargets:
         - AtlasMacUITests
