@@ -44,8 +44,10 @@ ensure_project() {
 
 ship_check() {
   # The hermetic gate: the core package and both platforms build and test.
+  # The end-to-end flows (just ui-test-ios, just e2e) need a booted simulator
+  # and the live TfL feed, so they are a manual step before a ship, not part
+  # of it.
   (cd "$ROOT" && just check)
-  (cd "$ROOT" && just test-ios)
 }
 
 ship_build() {
