@@ -27,6 +27,31 @@ public struct AtlasData: Codable, Sendable {
     }
 
     public var pointCount: Int { routes.reduce(0) { $0 + $1.locations.count } }
+
+    /// Reads a snapshot written by the importer.
+    public init(contentsOf url: URL) throws {
+        self = try JSONDecoder().decode(AtlasData.self, from: try Data(contentsOf: url))
+    }
+
+    /// Adds another snapshot's items on top of this one. Fresh imports win when
+    /// an id collides, so re-importing a place or a walk updates it in place
+    /// instead of duplicating it. Used to add a Health export without dropping
+    /// the places and flights that came from a different export.
+    public func merged(with newer: AtlasData) -> AtlasData {
+        func union<T>(_ old: [T], _ new: [T], id: (T) -> UUID) -> [T] {
+            var byID = Dictionary(old.map { (id($0), $0) }, uniquingKeysWith: { first, _ in first })
+            for item in new { byID[id(item)] = item }
+            return Array(byID.values)
+        }
+        return AtlasData(
+            walks: union(walks, newer.walks, id: \.id).sorted { $0.startDate > $1.startDate },
+            routes: union(routes, newer.routes, id: \.id).sorted { $0.startDate > $1.startDate },
+            places: union(places, newer.places, id: \.id).sorted { $0.createdAt > $1.createdAt },
+            flights: union(flights, newer.flights, id: \.id).sorted { $0.departure < $1.departure },
+            parcels: union(parcels, newer.parcels, id: \.id),
+            stations: stations.isEmpty ? newer.stations : stations
+        )
+    }
 }
 
 // MARK: - Where real data lives

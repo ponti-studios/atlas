@@ -189,10 +189,14 @@ struct AtlasCLI {
 
     static func runImport(_ arguments: [String]) {
         var options: [String: String] = [:]
+        var flags: Set<String> = []
         var index = 0
         while index < arguments.count {
             let key = arguments[index]
-            if key.hasPrefix("--"), index + 1 < arguments.count {
+            if key == "--replace" {
+                flags.insert("replace")
+                index += 1
+            } else if key.hasPrefix("--"), index + 1 < arguments.count {
                 options[String(key.dropFirst(2))] = arguments[index + 1]
                 index += 2
             } else {
@@ -200,25 +204,93 @@ struct AtlasCLI {
             }
         }
 
-        guard let gpx = options["gpx"], let out = options["out"] else {
-            print("usage: atlas-cli import --gpx <dir> [--places <csv>] [--transport <csv>] [--airports <csv>] --out <json>")
+        // Route source: either a plain GPX folder (`--gpx`) or an Apple Health
+        // export, zipped or unzipped (`--health`).
+        guard let out = options["out"], options["gpx"] != nil || options["health"] != nil else {
+            print("usage: atlas-cli import (--gpx <dir> | --health <export.zip|folder>) [--places <csv>] [--transport <csv>] [--airports <csv>] [--replace] --out <json>")
             return
         }
 
+        var scratch: URL?
+        defer { if let scratch { try? FileManager.default.removeItem(at: scratch) } }
+
         do {
-            let (data, report) = try AtlasImporter.build(
-                gpxDirectory: URL(fileURLWithPath: (gpx as NSString).expandingTildeInPath),
+            let routesDirectory: URL
+            if let health = options["health"] {
+                let resolved = try healthRoutesDirectory(path: health, scratch: &scratch)
+                routesDirectory = resolved
+            } else {
+                routesDirectory = URL(fileURLWithPath: (options["gpx"]! as NSString).expandingTildeInPath)
+            }
+
+            let (fresh, report) = try AtlasImporter.build(
+                gpxDirectory: routesDirectory,
                 placesCSV: options["places"].map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) },
                 transportCSV: options["transport"].map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) },
                 airportsCSV: options["airports"].map { URL(fileURLWithPath: ($0 as NSString).expandingTildeInPath) }
             )
             let outputURL = URL(fileURLWithPath: (out as NSString).expandingTildeInPath)
+
+            // A second import adds to the archive unless --replace is asked for.
+            var data = fresh
+            if !flags.contains("replace"),
+               let existing = try? AtlasData(contentsOf: outputURL) {
+                data = existing.merged(with: fresh)
+            }
+
             try AtlasImporter.write(data, to: outputURL)
             let size = (try? FileManager.default.attributesOfItem(atPath: outputURL.path)[.size] as? Int) ?? 0
             print(report.text)
             print("wrote \(outputURL.path) (\(size / 1_048_576) MB)")
         } catch {
             print("import failed: \(error)")
+        }
+    }
+
+    /// Resolves a Health export to the folder that holds its route files,
+    /// unzipping `export.zip` into a scratch directory when needed.
+    static func healthRoutesDirectory(path: String, scratch: inout URL?) throws -> URL {
+        let url = URL(fileURLWithPath: (path as NSString).expandingTildeInPath)
+        var isDirectory: ObjCBool = false
+        guard FileManager.default.fileExists(atPath: url.path, isDirectory: &isDirectory) else {
+            throw ImportError.missing(path)
+        }
+
+        var root = url
+        if !isDirectory.boolValue {
+            guard url.pathExtension.lowercased() == "zip" else {
+                throw ImportError.unsupported(path)
+            }
+            #if os(macOS)
+            let destination = FileManager.default.temporaryDirectory
+                .appendingPathComponent("atlas-health-\(UUID().uuidString)", isDirectory: true)
+            try FileManager.default.createDirectory(at: destination, withIntermediateDirectories: true)
+            scratch = destination
+            let process = Process()
+            process.executableURL = URL(fileURLWithPath: "/usr/bin/ditto")
+            process.arguments = ["-x", "-k", url.path, destination.path]
+            try process.run()
+            process.waitUntilExit()
+            guard process.terminationStatus == 0 else { throw ImportError.unzip(path) }
+            root = destination
+            #else
+            throw ImportError.unsupported(path)
+            #endif
+        }
+        return HealthExport.routesDirectory(in: root)
+    }
+}
+
+enum ImportError: LocalizedError {
+    case missing(String)
+    case unsupported(String)
+    case unzip(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .missing(let path): "no file or folder at \(path)"
+        case .unsupported(let path): "expected a .zip Health export or an unzipped export folder, got \(path)"
+        case .unzip(let path): "could not unzip \(path)"
         }
     }
 }

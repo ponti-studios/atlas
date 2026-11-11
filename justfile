@@ -5,6 +5,11 @@ set dotenv-load
 core := "AtlasCore"
 proj := "Atlas.xcodeproj"
 
+# The booted iPhone simulator. Xcode 26 names simulators with their runtime
+# ("iPhone 17 Pro (26.5)"), so resolve the booted device instead of matching a
+# name, and keep this machine's UDID out of the repository.
+sim := `xcrun simctl list devices booted -j | /usr/bin/python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next((x['udid'] for v in d.values() for x in v if x['state']=='Booted' and x['name'].startswith('iPhone')), ''))"`
+
 # Build the headless core + CLI
 build-core:
     cd {{core}} && swift build
@@ -58,6 +63,17 @@ import-data:
         --airports "{{travel}}/Airports.csv" \
         --out "$HOME/{{datafile}}"
 
+# Import the Apple Health export: the export.zip from Health, or its folder.
+# Merges into the snapshot, so walks, places and flights already there stay.
+import-health PATH:
+    cd {{core}} && swift build
+    cd {{core}} && .build/debug/atlas-cli import \
+        --health "{{PATH}}" \
+        --places "{{places_csv}}" \
+        --transport "{{travel}}/Transport.csv" \
+        --airports "{{travel}}/Airports.csv" \
+        --out "$HOME/{{datafile}}"
+
 # Inspect the imported snapshot
 stats:
     cd {{core}} && ATLAS_DATA_FILE="$HOME/{{datafile}}" .build/debug/atlas-cli stats
@@ -83,9 +99,9 @@ bench-baseline:
 
 # Copy the snapshot into the booted simulator's app container
 push-ios-data:
-    APP=$$(xcrun simctl get_app_container booted io.ponti.atlas.ios data); \
-    cp "$HOME/{{datafile}}" "$$APP/Documents/atlas-data.json"; \
-    echo "copied to $$APP/Documents/atlas-data.json"
+    APP=$(xcrun simctl get_app_container booted io.ponti.atlas.ios data); \
+    cp "$HOME/{{datafile}}" "$APP/Documents/atlas-data.json"; \
+    echo "copied to $APP/Documents/atlas-data.json"
 
 # Regenerate Xcode project from project.yml
 gen:
@@ -102,15 +118,15 @@ build-mac:
 # Build and run the macOS Release app (the fast path; Debug is much slower)
 run-mac:
     xcodebuild -project {{proj}} -scheme 'Atlas macOS' -configuration Release -destination 'generic/platform=macOS' build
-    open "$$(find $$HOME/Library/Developer/Xcode/DerivedData/Atlas-*/Build/Products/Release -maxdepth 1 -name 'Atlas macOS.app' | head -1)"
+    open "$(find $HOME/Library/Developer/Xcode/DerivedData/Atlas-*/Build/Products/Release -maxdepth 1 -name 'Atlas macOS.app' | head -1)"
 
 # Run iOS unit tests
 test-ios:
-    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:AtlasTests test
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -destination 'id={{sim}}' -only-testing:AtlasTests test
 
 # End-to-end: tap a camera dot, expect its monitor (needs the live TfL feed)
 ui-test-ios:
-    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -only-testing:AtlasUITests test
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'id={{sim}}' -only-testing:AtlasUITests test
 
 # Maestro flow: drive the app by touch on the booted simulator
 maestro-ios:
@@ -157,10 +173,10 @@ doctor:
 
 # Build, install and launch on the booted simulator
 sim:
-    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'platform=iOS Simulator,name=iPhone 17 Pro' -derivedDataPath .build/dd-ios build
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'id={{sim}}' -derivedDataPath .build/dd-ios build
     -xcrun simctl terminate booted io.ponti.atlas.ios
     xcrun simctl install booted ".build/dd-ios/Build/Products/Release-iphonesimulator/Atlas iOS.app"
-    APP=$$(xcrun simctl get_app_container booted io.ponti.atlas.ios data); cp "$HOME/{{datafile}}" "$$APP/Documents/atlas-data.json"
+    APP=$(xcrun simctl get_app_container booted io.ponti.atlas.ios data); cp "$HOME/{{datafile}}" "$APP/Documents/atlas-data.json"
     SIMCTL_CHILD_ATLAS_REFLEX=1 xcrun simctl launch booted io.ponti.atlas.ios
 
 # End-to-end flows on the simulator

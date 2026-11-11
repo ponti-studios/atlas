@@ -69,6 +69,7 @@ The app runs on a portable snapshot built from real exports:
 
 ```sh
 just import-data   # GPX directory + places CSV + flight legs -> atlas-data.json
+just import-health ~/Downloads/export.zip   # Apple Health export -> walks
 just stats         # 92 walks / 12 months / 1,407 places / 38 flights
 just push-ios-data # copy the snapshot into the booted simulator
 just cams          # list the live TfL JamCam feed (network)
@@ -78,6 +79,26 @@ just cams          # list the live TfL JamCam feed (network)
 the app's Documents directory on iOS. If it is missing, the app falls back to
 the seeded demo data. `ATLAS_DATA_FILE` overrides both. Places you save in the
 app are written to `atlas-places.json` beside it.
+
+### Apple Health walks
+
+The Health app exports a zip whose `apple_health_export/workout-routes/` folder
+holds one GPX per route-bearing workout. On the iPhone: Health ▸ your picture ▸
+**Export All Health Data**, then AirDrop the zip to the Mac.
+
+```sh
+just import-health ~/Downloads/export.zip
+```
+
+The command accepts the zip or an already-unzipped export folder, finds the
+routes wherever they are nested, and **merges** into the existing snapshot — so
+places and flights from other exports survive, and re-importing a route updates
+it instead of duplicating it. Only workouts recorded with location have a route;
+a workout that never left the treadmill is not in the export.
+
+Flight legs come from a transport export (`Transport.csv` + `Airports.csv`, see
+`ATLAS_TRAVEL_DIR`), and places from a places CSV (`ATLAS_PLACES_CSV`). Both are
+also merge-safe: run either after a Health import and nothing is lost.
 
 Import sources used here: 92 GPX tracks (87,682 points), 1,407 geocoded places
 (151 rows skipped for missing coordinates, 143 duplicates collapsed), and 38

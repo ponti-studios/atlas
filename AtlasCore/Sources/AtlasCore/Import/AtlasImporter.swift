@@ -99,13 +99,9 @@ public enum AtlasImporter {
         }
 
         // Walks: newest first so the first card is the most recent route.
-        let files = (try? FileManager.default.contentsOfDirectory(
-            at: gpxDirectory,
-            includingPropertiesForKeys: nil
-        )) ?? []
-        let gpxFiles = files
-            .filter { $0.pathExtension.lowercased() == "gpx" }
-            .sorted { $0.lastPathComponent > $1.lastPathComponent }
+        // The scan is recursive: an Apple Health export keeps its routes in
+        // `apple_health_export/workout-routes/`, one folder below the root.
+        let gpxFiles = gpxFiles(in: gpxDirectory)
 
         var walks: [WalkRouteSummary] = []
         var routes: [WalkRoute] = []
@@ -198,6 +194,22 @@ public enum AtlasImporter {
     }
 
     // MARK: - Parsing helpers
+
+    /// Every `.gpx` beneath `directory`, newest name first. Recursive because a
+    /// Health export nests its routes, and a personal GPX folder may be nested
+    /// by year.
+    static func gpxFiles(in directory: URL) -> [URL] {
+        guard let enumerator = FileManager.default.enumerator(
+            at: directory,
+            includingPropertiesForKeys: [.isRegularFileKey],
+            options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        ) else { return [] }
+        var found: [URL] = []
+        for case let url as URL in enumerator where url.pathExtension.lowercased() == "gpx" {
+            found.append(url)
+        }
+        return found.sorted { $0.lastPathComponent > $1.lastPathComponent }
+    }
 
     /// Personal-data exports sometimes encode line breaks and commas as literal
     /// `\n` / `\,` inside a name. Keep the first line (the venue) and unescape
