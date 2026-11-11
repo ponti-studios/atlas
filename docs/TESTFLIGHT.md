@@ -63,6 +63,13 @@ machine.
 Do not fall back to Xcode's account session for the upload: it expires and the
 export then fails with *"Your session has expired. Please log in."*
 
+## Testers
+
+The **Internal** group holds the account holder only, with automatic
+distribution on: every uploaded build is assigned to it and appears in the
+TestFlight app without a manual step. Use *Internal ▸ Builds* to see what a
+group can install.
+
 ## The Mac app
 
 `just testflight` ships the iOS app only. The Mac app goes out through the
