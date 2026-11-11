@@ -72,8 +72,16 @@ just import-data   # GPX directory + places CSV + flight legs -> atlas-data.json
 just import-health ~/Downloads/export.zip   # Apple Health export -> walks
 just stats         # 92 walks / 12 months / 1,407 places / 38 flights
 just push-ios-data # copy the snapshot into the booted simulator
+just sim           # build, install and launch on the booted simulator
+just device        # development build straight onto the paired iPhone
 just cams          # list the live TfL JamCam feed (network)
 ```
+
+A **development build** needs no TestFlight: `just device` builds Debug, signs it
+with the development identity (automatic signing, authenticated with the App
+Store Connect key), installs it on the paired iPhone, copies the snapshot into
+its container and launches it. Debug builds also carry the Reflex server, so the
+app can be driven from the shell while it runs on the phone.
 
 `atlas-data.json` lives in `~/Library/Application Support/Atlas` on macOS and in
 the app's Documents directory on iOS. If it is missing, the app falls back to

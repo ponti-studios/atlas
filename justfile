@@ -179,6 +179,38 @@ sim:
     APP=$(xcrun simctl get_app_container booted io.ponti.atlas.ios data); cp "$HOME/{{datafile}}" "$APP/Documents/atlas-data.json"
     SIMCTL_CHILD_ATLAS_REFLEX=1 xcrun simctl launch booted io.ponti.atlas.ios
 
+# Development build on the connected iPhone: no TestFlight, no archive.
+# Set ATLAS_DEVICE_ID to pin a device; otherwise the first paired iPhone wins.
+device:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    envfile="${ATLAS_SHIP_ENV:-$HOME/.atlas-ship.env}"
+    [[ -f "$envfile" ]] && { set -a; source "$envfile"; set +a; }
+    auth=()
+    if [[ -n "${ATLAS_ASC_KEY_ID:-}" && -n "${ATLAS_ASC_ISSUER_ID:-}" && -f "${ATLAS_ASC_KEY_DIR:-}/AuthKey_$ATLAS_ASC_KEY_ID.p8" ]]; then
+        auth=(-authenticationKeyPath "$ATLAS_ASC_KEY_DIR/AuthKey_$ATLAS_ASC_KEY_ID.p8"
+              -authenticationKeyID "$ATLAS_ASC_KEY_ID"
+              -authenticationKeyIssuerID "$ATLAS_ASC_ISSUER_ID")
+    fi
+    udid="${ATLAS_DEVICE_ID:-$(xcodebuild -project {{proj}} -scheme 'Atlas iOS' -showdestinations 2>/dev/null \
+        | sed -nE 's/.*platform:iOS, arch:arm64, id:([0-9A-Fa-f-]{20,}), name:.*/\1/p' | head -1)}"
+    [[ -n "$udid" ]] || { echo 'no paired iPhone; connect one, unlock it, and trust this Mac'; exit 1; }
+    echo "device $udid"
+    xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Debug \
+        -destination "platform=iOS,id=$udid" \
+        -allowProvisioningUpdates -allowProvisioningDeviceRegistration \
+        "${auth[@]+"${auth[@]}"}" \
+        -derivedDataPath .build/dd-device build
+    xcrun devicectl device install app --device "$udid" \
+        ".build/dd-device/Build/Products/Debug-iphoneos/Atlas iOS.app"
+    xcrun devicectl device copy to --device "$udid" \
+        --domain-type appDataContainer --domain-identifier io.ponti.atlas.ios \
+        --source "$HOME/{{datafile}}" --destination Documents/atlas-data.json
+    # A locked iPhone refuses to launch anything; that is not a build failure.
+    if ! xcrun devicectl device process launch --device "$udid" --terminate-existing io.ponti.atlas.ios 2>/dev/null; then
+        echo "Installed. iOS will not launch an app while the iPhone is locked — unlock it and tap Atlas."
+    fi
+
 # End-to-end flows on the simulator
 e2e:
     just maestro-ios
