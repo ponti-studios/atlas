@@ -8,8 +8,16 @@
   <string>upload</string>
   <key>teamID</key>
   <string>3QHJ2KN8AL</string>
+  <!-- Manual signing with the installed App Store profile keeps the export
+       reproducible: automatic signing asks the portal for a profile and needs
+       a live Xcode account session. -->
   <key>signingStyle</key>
-  <string>automatic</string>
+  <string>manual</string>
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>io.ponti.atlas.ios</key>
+    <string>Atlas iOS Distribution</string>
+  </dict>
   <key>uploadSymbols</key>
   <true/>
   <key>manageAppVersionAndBuildNumber</key>

@@ -33,6 +33,19 @@ ARCHIVE="$OUT/Atlas.xcarchive"
 EXPORT_PLIST="$ROOT/scripts/ExportOptions-testflight.plist"
 plist() { /usr/libexec/PlistBuddy -c "Print :$2" "$1/Info.plist"; }
 
+# App Store Connect authentication. Xcode's own account session expires and
+# then the upload dies with "Your session has expired", so the ship uses an API
+# key instead: an Admin key stored outside the repository in $ATLAS_ASC_KEY_DIR.
+ASC_KEY_DIR="${ATLAS_ASC_KEY_DIR:-$HOME/ASC_KEY_DIR}"
+ASC_KEY_ID="${ATLAS_ASC_KEY_ID:-REDACTED-KEY-ID}"
+ASC_ISSUER_ID="${ATLAS_ASC_ISSUER_ID:-REDACTED-ISSUER-ID}"
+ASC_ARGS=()
+if [[ -f "$ASC_KEY_DIR/AuthKey_$ASC_KEY_ID.p8" ]]; then
+  ASC_ARGS=(-authenticationKeyPath "$ASC_KEY_DIR/AuthKey_$ASC_KEY_ID.p8"
+            -authenticationKeyID "$ASC_KEY_ID"
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID")
+fi
+
 # The Xcode project is generated from project.yml, so a fresh checkout has to
 # make it before it can build.
 ensure_project() {
@@ -61,6 +74,7 @@ ship_build() {
   note "Archiving build $SHIP_BUILD (Release)"
   xcodebuild -project "$PROJECT" -scheme "$SCHEME" -configuration Release \
     -destination 'generic/platform=iOS' -archivePath "$ARCHIVE" -allowProvisioningUpdates \
+    "${ASC_ARGS[@]+"${ASC_ARGS[@]}"}" \
     CURRENT_PROJECT_VERSION="$SHIP_BUILD" archive >"$OUT/archive.log" 2>&1 \
     || { tail -25 "$OUT/archive.log" >&2; fail "Archive failed. Full log: $OUT/archive.log"; }
   [[ -d "$ARCHIVE/Products/Applications" ]] || fail 'The archive has no Applications folder.'
@@ -105,10 +119,12 @@ ship_symbols() {
 }
 
 ship_upload() {
-  # Export with the upload destination, which sends the build to App Store Connect
-  # (Xcode must be signed in, or an App Store Connect API key must be set).
+  # Export with the upload destination, which sends the build to App Store
+  # Connect. The API key authenticates the upload, so the pipeline does not
+  # depend on a live Xcode account session.
   xcodebuild -exportArchive -archivePath "$ARCHIVE" -exportPath "$OUT/export" \
-    -exportOptionsPlist "$EXPORT_PLIST" -allowProvisioningUpdates >"$OUT/export.log" 2>&1 \
+    -exportOptionsPlist "$EXPORT_PLIST" "${ASC_ARGS[@]+"${ASC_ARGS[@]}"}" \
+    -allowProvisioningUpdates >"$OUT/export.log" 2>&1 \
     || { tail -25 "$OUT/export.log" >&2; fail "Upload failed. Full log: $OUT/export.log"; }
 }
 
