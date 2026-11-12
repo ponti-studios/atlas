@@ -145,6 +145,7 @@ rondo-ios:
 rondo-ios-place:
     -rm -f "$(xcrun simctl get_app_container booted io.ponti.atlas.ios data)/Documents/atlas-places.json"
     {{rondo}} test maestro/place-search.yaml --device {{sim}}
+    cp .rondo/screenshots/docs/design/maestro-place-search.png docs/design/maestro-place-search.png
     cp .rondo/screenshots/docs/design/maestro-place-results.png docs/design/maestro-place-results.png
 
 
