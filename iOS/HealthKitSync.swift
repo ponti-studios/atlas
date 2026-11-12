@@ -81,9 +81,13 @@ final class HealthKitSync {
 
         do {
             let workouts = try await recentWorkouts(since: since)
+                .filter { Self.accepted.contains($0.workoutActivityType) }
+            // The workout query is cheap and complete, so the total is known
+            // before a single route is read: the count on screen is real.
+            model.reportProgress(completed: 0, total: workouts.count)
+
             var converted: [HealthWorkout] = []
-            for workout in workouts {
-                guard Self.accepted.contains(workout.workoutActivityType) else { continue }
+            for (index, workout) in workouts.enumerated() {
                 let points = await routeLocations(for: workout)
                 converted.append(HealthWorkout(
                     id: workout.uuid,
@@ -92,6 +96,7 @@ final class HealthKitSync {
                     activity: Self.activityName(workout.workoutActivityType),
                     locations: points
                 ))
+                model.reportProgress(completed: index + 1, total: workouts.count)
             }
             let merged = HealthWalkArchive.merging(converted, into: existing)
             try merged.write(to: archiveURL)

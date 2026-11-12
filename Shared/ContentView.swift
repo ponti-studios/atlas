@@ -643,10 +643,19 @@ struct ContentView: View {
                     Text("Apple Health")
                         .font(.system(size: 9, weight: .semibold))
                         .foregroundStyle(Color.white.opacity(0.78))
-                    Text(health.state.summary)
-                        .font(.system(size: 8, weight: .medium))
-                        .foregroundStyle(health.state.needsAction ? AtlasTheme.rose.opacity(0.92) : Color.white.opacity(0.38))
-                        .lineLimit(1)
+                    if let progress = health.progress, progress.total > 0 {
+                        Text(progress.summary)
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundStyle(AtlasTheme.rose.opacity(0.92))
+                            .lineLimit(1)
+                        healthBar(progress)
+                            .padding(.top, 2)
+                    } else {
+                        Text(health.state.summary)
+                            .font(.system(size: 8, weight: .medium))
+                            .foregroundStyle(health.state.needsAction ? AtlasTheme.rose.opacity(0.92) : Color.white.opacity(0.38))
+                            .lineLimit(1)
+                    }
                 }
                 Spacer(minLength: 0)
                 if health.state.isBusy {
@@ -670,6 +679,30 @@ struct ContentView: View {
         .buttonStyle(.plain)
         .disabled(health.state.isBusy)
         .accessibilityLabel("Sync Apple Health walks")
+    }
+
+    /// A real bar, not a spinner: the width is the fraction of workouts already
+    /// read, and it animates as each one lands.
+    private func healthBar(_ progress: HealthSyncProgress) -> some View {
+        GeometryReader { geo in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.10))
+                Capsule()
+                    .fill(
+                        LinearGradient(
+                            colors: [AtlasTheme.rose, AtlasTheme.violet],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    )
+                    .frame(width: max(2, geo.size.width * progress.fraction))
+                    .animation(.easeOut(duration: 0.22), value: progress.fraction)
+            }
+        }
+        .frame(height: 3)
+        .accessibilityLabel("Health sync progress")
+        .accessibilityValue("\(progress.completed) of \(progress.total)")
     }
 
     private var collapsedRail: some View {

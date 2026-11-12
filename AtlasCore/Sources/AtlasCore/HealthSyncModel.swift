@@ -1,6 +1,29 @@
 import Foundation
 import Combine
 
+/// How far a sync has got: workouts read out of the total Health will give.
+public struct HealthSyncProgress: Equatable, Sendable {
+    public var completed: Int
+    public var total: Int
+
+    public init(completed: Int = 0, total: Int = 0) {
+        self.completed = completed
+        self.total = total
+    }
+
+    public var fraction: Double {
+        guard total > 0 else { return 0 }
+        return min(1, max(0, Double(completed) / Double(total)))
+    }
+
+    public var isComplete: Bool { total > 0 && completed >= total }
+
+    public var summary: String {
+        guard total > 0 else { return "Reading your workouts…" }
+        return "Syncing \(completed) of \(total)"
+    }
+}
+
 /// What the UI needs to know about the Health connection. Lives in the core so
 /// the sidebar can show it without importing HealthKit, and so the iOS sync can
 /// be driven from a test double.
@@ -38,6 +61,8 @@ public final class HealthSyncModel: ObservableObject {
 
     @Published public private(set) var state: State = .unavailable
     @Published public private(set) var lastSyncedAt: Date?
+    /// Filled while a sync runs, so the row can show "12 of 92" and a bar.
+    @Published public private(set) var progress: HealthSyncProgress?
 
     private var runner: (() async -> Void)?
 
@@ -56,10 +81,19 @@ public final class HealthSyncModel: ObservableObject {
 
     public func report(_ state: State) {
         self.state = state
+        if case .syncing = state {} else { progress = nil }
+    }
+
+    /// Called by the platform sync as each workout is read, so the count on
+    /// screen is the number already saved, not a guess.
+    public func reportProgress(completed: Int, total: Int) {
+        progress = HealthSyncProgress(completed: completed, total: total)
+        if case .syncing = state {} else { state = .syncing }
     }
 
     public func reportSynced(count: Int, at date: Date) {
         lastSyncedAt = date
+        progress = nil
         state = .synced(count)
     }
 }

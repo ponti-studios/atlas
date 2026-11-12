@@ -90,8 +90,24 @@ final class HealthArchiveTests: XCTestCase {
         XCTAssertTrue(loaded.walks.isEmpty)
     }
 
-    // MARK: - Store merge
+    // MARK: - Progress
 
+    func testProgressReportsRealCountsAndClamps() {
+        let progress = HealthSyncProgress(completed: 12, total: 951)
+        XCTAssertEqual(progress.fraction, 12.0 / 951.0, accuracy: 0.0001)
+        XCTAssertEqual(progress.summary, "Syncing 12 of 951")
+        XCTAssertFalse(progress.isComplete)
+
+        let done = HealthSyncProgress(completed: 951, total: 951)
+        XCTAssertEqual(done.fraction, 1)
+        XCTAssertTrue(done.isComplete)
+
+        let unknown = HealthSyncProgress(completed: 0, total: 0)
+        XCTAssertEqual(unknown.fraction, 0, "no total yet is not a divide by zero")
+        XCTAssertEqual(unknown.summary, "Reading your workouts…")
+    }
+
+    // MARK: - Store merge
     @MainActor
     func testStoreMergesHealthWalksIntoTheSnapshot() async throws {
         let snapshotURL = root.appendingPathComponent("atlas-data.json")
