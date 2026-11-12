@@ -8,6 +8,10 @@ proj := "Atlas.xcodeproj"
 # The booted iPhone simulator. Xcode 26 names simulators with their runtime
 # ("iPhone 17 Pro (26.5)"), so resolve the booted device instead of matching a
 # name, and keep this machine's UDID out of the repository.
+# Rondo: a Swift runner for Maestro-format YAML flows. No JVM, no Java install.
+# Override with RONDO=/path/to/binary to use a different build.
+rondo := env_var_or_default("RONDO", home_directory() / "Developer/rondo/.build/release/rondo")
+
 sim := `xcrun simctl list devices booted -j | /usr/bin/python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next((x['udid'] for v in d.values() for x in v if x['state']=='Booted' and x['name'].startswith('iPhone')), ''))"`
 
 # Build the headless core + CLI
@@ -128,21 +132,21 @@ test-ios:
 ui-test-ios:
     xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'id={{sim}}' -only-testing:AtlasUITests test
 
-# Maestro flow: drive the app by touch on the booted simulator
-maestro-ios:
-    JAVA_HOME="/opt/homebrew/opt/openjdk@17" \
-        ~/.maestro/bin/maestro --device "$(xcrun simctl list devices booted | grep -m1 -E '^ *iPhone' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')" \
-        test maestro/camera-tap.yaml
-    cp "$(ls -t $HOME/.maestro/tests/*/camera-tap/takeScreenshot/docs/design/maestro-camera-tap.png | head -1)" docs/design/maestro-camera-tap.png
+# Build the flow runner. Its XCUITest driver is compiled on first use and cached.
+rondo-build:
+    swift build --package-path {{home_directory() / "Developer/rondo"}} -c release
 
-# Maestro flow: search Apple Maps for a place and save it
-maestro-ios-place:
+# Flow: drive the app by touch on the booted simulator
+rondo-ios:
+    {{rondo}} test maestro/camera-tap.yaml --device {{sim}}
+    cp .rondo/screenshots/docs/design/maestro-camera-tap.png docs/design/maestro-camera-tap.png
+
+# Flow: search Apple Maps for a place and save it
+rondo-ios-place:
     -rm -f "$(xcrun simctl get_app_container booted io.ponti.atlas.ios data)/Documents/atlas-places.json"
-    JAVA_HOME="/opt/homebrew/opt/openjdk@17" \
-        ~/.maestro/bin/maestro --device "$(xcrun simctl list devices booted | grep -m1 -E '^ *iPhone' | sed -E 's/.*\(([0-9A-F-]{36})\).*/\1/')" \
-        test maestro/place-search.yaml
-    cp "$(ls -t $HOME/.maestro/tests/*/place-search/takeScreenshot/docs/design/maestro-place-search.png | head -1)" docs/design/maestro-place-search.png
-    cp "$(ls -t $HOME/.maestro/tests/*/place-search/takeScreenshot/docs/design/maestro-place-results.png | head -1)" docs/design/maestro-place-results.png
+    {{rondo}} test maestro/place-search.yaml --device {{sim}}
+    cp .rondo/screenshots/docs/design/maestro-place-results.png docs/design/maestro-place-results.png
+
 
 # End-to-end on the desktop; the Reflex port is exclusive, so close the iOS app
 ui-test-mac:
@@ -214,8 +218,8 @@ device:
 
 # End-to-end flows on the simulator
 e2e:
-    just maestro-ios
-    just maestro-ios-place
+    just rondo-ios
+    just rondo-ios-place
 
 # Ship the iOS app to TestFlight, the studio way (ship-ios skill)
 testflight *args:

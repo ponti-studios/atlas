@@ -34,6 +34,9 @@ Apple*.cer
 secrets.*
 credentials.*
 
+# Flow-runner output (screenshots)
+.rondo/
+
 # Local archives and captures
 capture/
 *.xcactivitylog
