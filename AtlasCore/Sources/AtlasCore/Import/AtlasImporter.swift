@@ -134,26 +134,25 @@ public enum AtlasImporter {
             let hasRoute = locations.count > 1
 
             // Geometry facts travel with the summary, so the app never has to
-            // scan every route to know where it is.
+            // scan every route to know where it is. A track with no drawable
+            // route is not imported at all.
             let coordinates = locations.map { GeoCoordinate(latitude: $0.latitude, longitude: $0.longitude) }
-            let bounds = GeoBounds(points: coordinates)
-            let distance = bounds == nil ? nil : RouteGeometry.length(coordinates)
+            guard hasRoute, let bounds = GeoBounds(points: coordinates) else { continue }
+            let distance = RouteGeometry.length(coordinates)
 
             walks.append(WalkRouteSummary(
                 id: id,
                 startDate: start,
                 endDate: end,
-                hasGPSRoute: hasRoute,
+                hasGPSRoute: true,
                 title: title,
                 activity: activity,
                 bounds: bounds,
                 pointCount: locations.count,
                 distanceMeters: distance
             ))
-            if hasRoute {
-                routes.append(WalkRoute(id: id, startDate: start, endDate: end, locations: locations))
-                points += locations.count
-            }
+            routes.append(WalkRoute(id: id, startDate: start, endDate: end, locations: locations))
+            points += locations.count
         }
 
         // The export can contain the same place several times (different

@@ -186,12 +186,15 @@ public final class FileAtlasStore: AtlasDataSource {
 
         // An archive written before geometry facts existed is filled in once,
         // off the main actor, so the next launch reads bounds instead of
-        // scanning every route.
+        // scanning every route. Route-less walks left by older builds are
+        // dropped in the same pass and excluded from this launch's data.
         let url = healthArchiveURL
-        if health.walks.contains(where: { $0.bounds == nil }) {
+        if let repaired = health.normalized() {
+            let repairedSnapshot = repaired.snapshot
+            data = baseData.merged(with: repairedSnapshot)
+            routes = Dictionary(data?.routes.map { ($0.id, $0) } ?? [], uniquingKeysWith: { first, _ in first })
             Task.detached(priority: .utility) {
-                guard let fixed = health.withGeometryFilled() else { return }
-                try? fixed.write(to: url)
+                try? repaired.write(to: url)
             }
         }
     }

@@ -67,17 +67,16 @@ final class HealthArchiveTests: XCTestCase {
         )
         XCTAssertNil(legacy.walks[0].bounds)
 
-        let filled = legacy.withGeometryFilled()
+        let filled = legacy.normalized()
         XCTAssertNotNil(filled)
         XCTAssertNotNil(filled?.walks[0].bounds)
         XCTAssertEqual(filled?.walks[0].pointCount, 5)
-        XCTAssertNil(filled?.withGeometryFilled(), "a repaired archive needs no second pass")
+        XCTAssertNil(filled?.normalized(), "a repaired archive needs no second pass")
     }
 
-    func testWorkoutWithoutRouteStaysInTheList() {
-        let archive = HealthWalkArchive.merging([workout(points: 0)], into: HealthWalkArchive())
-        XCTAssertEqual(archive.walks.count, 1, "a walk recorded without location still happened")
-        XCTAssertEqual(archive.walks[0].hasGPSRoute, false)
+    func testWorkoutWithoutRouteIsNotImported() {
+        let archive = HealthWalkArchive.merging([workout(points: 0), workout(points: 1)], into: HealthWalkArchive())
+        XCTAssertTrue(archive.walks.isEmpty, "a workout with no drawable route is not a walk this app can show")
         XCTAssertTrue(archive.routes.isEmpty)
     }
 

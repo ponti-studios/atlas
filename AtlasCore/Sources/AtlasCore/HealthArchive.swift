@@ -87,23 +87,22 @@ public struct HealthWalkArchive: Codable, Sendable, Equatable {
         for workout in workouts {
             let id = workout.id
             let points = workout.locations
-            let hasRoute = hasRoute(points)
+            // A workout with no route cannot be drawn, so it is not a walk
+            // this app can show. Skip it rather than list a dead card.
+            guard hasRoute(points), let bounds = GeoBounds(points: points.map({ GeoCoordinate(latitude: $0.latitude, longitude: $0.longitude) })) else { continue }
             let coordinates = points.map { GeoCoordinate(latitude: $0.latitude, longitude: $0.longitude) }
-            let bounds = hasRoute ? GeoBounds(points: coordinates) : nil
             walks[id] = WalkRouteSummary(
                 id: id,
                 startDate: workout.start,
                 endDate: workout.end,
-                hasGPSRoute: hasRoute,
+                hasGPSRoute: true,
                 title: nil,
                 activity: workout.activity,
                 bounds: bounds,
                 pointCount: points.count,
-                distanceMeters: bounds == nil ? nil : RouteGeometry.length(coordinates)
+                distanceMeters: RouteGeometry.length(coordinates)
             )
-            if hasRoute {
-                routes[id] = WalkRoute(id: id, startDate: workout.start, endDate: workout.end, locations: points)
-            }
+            routes[id] = WalkRoute(id: id, startDate: workout.start, endDate: workout.end, locations: points)
         }
 
         return HealthWalkArchive(
@@ -119,34 +118,50 @@ public struct HealthWalkArchive: Codable, Sendable, Equatable {
         AtlasData(walks: walks, routes: routes)
     }
 
-    /// Fills in the geometry facts for summaries written before they existed.
-    /// Returns nil when there is nothing to fix, so callers can skip the write.
-    public func withGeometryFilled() -> HealthWalkArchive? {
+    /// Repairs an archive written by an older build: drops walks that have no
+    /// route, and fills in the geometry facts that summaries now carry.
+    /// Returns nil when there is nothing to change, so callers can skip a write.
+    public func normalized() -> HealthWalkArchive? {
         let routesByID = Dictionary(routes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
         var changed = false
-        let filled = walks.map { walk -> WalkRouteSummary in
-            guard walk.bounds == nil, let route = routesByID[walk.id] else { return walk }
-            let coordinates = route.locations.map { GeoCoordinate(latitude: $0.latitude, longitude: $0.longitude) }
-            guard let bounds = GeoBounds(points: coordinates) else { return walk }
-            changed = true
-            return WalkRouteSummary(
-                id: walk.id,
-                startDate: walk.startDate,
-                endDate: walk.endDate,
-                hasGPSRoute: walk.hasGPSRoute,
-                title: walk.title,
-                activity: walk.activity,
-                bounds: bounds,
-                pointCount: coordinates.count,
-                distanceMeters: RouteGeometry.length(coordinates)
-            )
+        var kept: [WalkRouteSummary] = []
+        kept.reserveCapacity(walks.count)
+
+        for walk in walks {
+            guard walk.hasGPSRoute, let route = routesByID[walk.id] else {
+                changed = true
+                continue
+            }
+            if walk.bounds == nil {
+                let coordinates = route.locations.map { GeoCoordinate(latitude: $0.latitude, longitude: $0.longitude) }
+                guard let bounds = GeoBounds(points: coordinates) else {
+                    changed = true
+                    continue
+                }
+                changed = true
+                kept.append(WalkRouteSummary(
+                    id: walk.id,
+                    startDate: walk.startDate,
+                    endDate: walk.endDate,
+                    hasGPSRoute: true,
+                    title: walk.title,
+                    activity: walk.activity,
+                    bounds: bounds,
+                    pointCount: coordinates.count,
+                    distanceMeters: RouteGeometry.length(coordinates)
+                ))
+            } else {
+                kept.append(walk)
+            }
         }
+
         guard changed else { return nil }
+        let keptIDs = Set(kept.map(\.id))
         return HealthWalkArchive(
             version: version,
             lastSyncedAt: lastSyncedAt,
-            walks: filled,
-            routes: routes
+            walks: kept,
+            routes: routes.filter { keptIDs.contains($0.id) }
         )
     }
 }
