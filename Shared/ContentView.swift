@@ -977,7 +977,7 @@ struct ContentView: View {
     }
 
     /// Builds overlays for the routes near the viewport — the visible region
-    /// plus 50 km — and leaves the rest as index entries until the camera
+    /// plus 10 km — and leaves the rest as index entries until the camera
     /// moves somewhere they matter. Rebuilding is skipped until the camera has
     /// travelled 20 km or zoomed by more than a third, so panning stays cheap.
     @MainActor
@@ -998,7 +998,7 @@ struct ContentView: View {
             latitudeDelta: region.latitudeDelta,
             longitudeDelta: region.longitudeDelta
         )
-        let viewport = base.expanded(byKilometers: 50)
+        let viewport = base.expanded(byKilometers: 10)
 
         let loaded = Set(walkOverlays.map(\.id))
         let needed = routeIndex.values
