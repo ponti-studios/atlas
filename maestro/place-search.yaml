@@ -12,7 +12,10 @@ appId: io.ponti.atlas.ios
 - takeScreenshot: docs/design/maestro-place-results
 - tapOn:
     id: "atlas.savePlace"
-- tapOn: "Clear place search"
+# The clear button's hit target is its 11pt icon, which does not register
+# synthetic touches (the 44pt minimum exists for exactly this reason), so erase
+# the query instead.
+- eraseText: 12
 - tapOn: "Search places"
 - inputText: "Eiffel"
 - assertVisible: "48.858, 2.294"
