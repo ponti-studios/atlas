@@ -13,6 +13,11 @@ struct ContentView: View {
     @State private var selection: AtlasSelection?
     @State private var walkOverlays: [WalkOverlay] = []
     @State private var routeDistances: [UUID: Double] = [:]
+    /// Cheap facts about every route (bounds, length, point count) so the map
+    /// can decide what to draw without building an overlay for all of them.
+    @State private var routeIndex: [UUID: RouteMeta] = [:]
+    @State private var lastOverlayCenter: GeoCoordinate?
+    @State private var lastOverlaySpan: Double = 0
     @State private var cachedCards: [AtlasCard] = []
     @State private var cachedCardsKey = ""
     @State private var dataRevision = 0
@@ -68,7 +73,10 @@ struct ContentView: View {
             if feature == .cameras { await tabs.cameras.refreshIfNeeded() }
         }
         .task(id: cardsKey) { refreshCards() }
-        .task(id: tabs.walks.walks.map(\.id)) { await loadRoutes() }
+        .task(id: tabs.walks.walks.map(\.id)) { await indexRoutes() }
+        .onChange(of: map.state.region) { _, _ in
+            Task { await ensureOverlays() }
+        }
         .onChange(of: tabs.selected) { _, _ in
             selection = nil
             searchText = ""
@@ -920,40 +928,125 @@ struct ContentView: View {
     }
 
     @MainActor
-    private func loadRoutes() async {
-        AtlasPerformance.shared.begin("routes.prepare")
-        var overlays: [WalkOverlay] = []
+    private func indexRoutes() async {
+        AtlasPerformance.shared.begin("routes.index")
+        var index: [UUID: RouteMeta] = [:]
         var distances: [UUID: Double] = [:]
+        var scanned = 0
         for walk in tabs.walks.walks where walk.hasGPSRoute {
+            // The normal path: the summary already knows where it is.
+            if let bounds = walk.bounds, let pointCount = walk.pointCount, let distance = walk.distanceMeters {
+                index[walk.id] = RouteMeta(
+                    id: walk.id,
+                    bounds: bounds,
+                    pointCount: pointCount,
+                    distance: distance,
+                    startDate: walk.startDate
+                )
+                distances[walk.id] = distance
+                continue
+            }
+            // An archive from before those facts existed: scan this one route.
             guard let route = try? await tabs.walks.loadRoute(id: walk.id) else { continue }
             let points = route.locations.filter(\.isValidGPXPoint).map { GeoCoordinate($0.coordinate) }
             guard points.count > 1, let bounds = GeoBounds(points: points) else { continue }
-            let coordinates = points.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-            let simplified = RouteGeometry.simplify(points, toleranceMeters: 9, maxPoints: 420)
-                .map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
-            overlays.append(WalkOverlay(
+            let distance = RouteGeometry.length(points)
+            index[walk.id] = RouteMeta(
                 id: walk.id,
-                coordinates: coordinates,
-                simplified: simplified,
-                bounds: bounds
-            ))
-            distances[walk.id] = RouteGeometry.length(points)
+                bounds: bounds,
+                pointCount: points.count,
+                distance: distance,
+                startDate: walk.startDate
+            )
+            distances[walk.id] = distance
+            scanned += 1
         }
-        walkOverlays = overlays
+        routeIndex = index
         routeDistances = distances
         dataRevision &+= 1
         refreshCards()
-        AtlasPerformance.shared.end("routes.prepare")
-        AtlasPerformance.shared.mark("routes.ready")
-        AtlasPerformance.shared.increment("routes.loaded", by: Double(overlays.count))
-        AtlasPerformance.shared.increment("routes.overview.points", by: Double(overlays.reduce(0) { $0 + $1.simplified.count }))
+        AtlasPerformance.shared.end("routes.index")
+        AtlasPerformance.shared.mark("routes.indexed")
+        AtlasPerformance.shared.increment("routes.indexed", by: Double(index.count))
+        let indexedMS = AtlasPerformance.shared.report().stagesMS["routes.index"] ?? 0
+        NSLog("Atlas routes: indexed %d routes in %.0f ms (%d scanned)", index.count, indexedMS, scanned)
 
-        if feature == .walks, selection == nil {
-            focusActive()
-        } else if case .walk(let id)? = selection,
-                  let coordinates = overlays.first(where: { $0.id == id })?.coordinates {
-            map.focus(on: coordinates.map { GeoCoordinate($0) }, padding: 1.85)
+        // Only the routes near the camera get geometry built for them.
+        await ensureOverlays(force: true)
+        if feature == .walks, selection == nil { focusActive() }
+    }
+
+    /// Builds overlays for the routes near the viewport — the visible region
+    /// plus 50 km — and leaves the rest as index entries until the camera
+    /// moves somewhere they matter. Rebuilding is skipped until the camera has
+    /// travelled 20 km or zoomed by more than a third, so panning stays cheap.
+    @MainActor
+    private func ensureOverlays(force: Bool = false) async {
+        guard !routeIndex.isEmpty else { return }
+        let region = map.state.region
+        let span = region.latitudeDelta
+        if !force, let lastCenter = lastOverlayCenter {
+            let moved = lastCenter.distance(to: region.center)
+            let zoomed = abs(span - lastOverlaySpan) / max(lastOverlaySpan, 1e-9)
+            if moved < 20_000, zoomed < 0.35 { return }
         }
+        lastOverlayCenter = region.center
+        lastOverlaySpan = span
+
+        let base = GeoBounds.viewport(
+            center: region.center,
+            latitudeDelta: region.latitudeDelta,
+            longitudeDelta: region.longitudeDelta
+        )
+        let viewport = base.expanded(byKilometers: 50)
+
+        let loaded = Set(walkOverlays.map(\.id))
+        let needed = routeIndex.values
+            .filter { $0.bounds.intersects(viewport) && !loaded.contains($0.id) }
+            .sorted { $0.startDate > $1.startDate }
+
+        var built: [WalkOverlay] = []
+        for (index, meta) in needed.enumerated() {
+            if let overlay = await makeOverlay(id: meta.id) { built.append(overlay) }
+            // Let the main actor breathe every batch, so a big archive fills
+            // in behind an interactive map instead of freezing it.
+            if index % 24 == 23 { await Task.yield() }
+        }
+        guard !built.isEmpty else { return }
+        walkOverlays.append(contentsOf: built)
+        NSLog("Atlas routes: built %d overlays near the camera, %d loaded of %d indexed",
+              built.count, walkOverlays.count, routeIndex.count)
+        AtlasPerformance.shared.increment("routes.overlays.built", by: Double(built.count))
+        AtlasPerformance.shared.increment("routes.overlay.points", by: Double(built.reduce(0) { $0 + $1.simplified.count }))
+    }
+
+    /// Geometry for one route, built only when something is going to draw it.
+    @MainActor
+    private func makeOverlay(id: UUID) async -> WalkOverlay? {
+        guard let route = try? await tabs.walks.loadRoute(id: id) else { return nil }
+        let points = route.locations.filter(\.isValidGPXPoint).map { GeoCoordinate($0.coordinate) }
+        guard points.count > 1, let bounds = GeoBounds(points: points) else { return nil }
+        let coordinates = points.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        let simplified = RouteGeometry.simplify(points, toleranceMeters: 9, maxPoints: 420)
+            .map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+        return WalkOverlay(id: id, coordinates: coordinates, simplified: simplified, bounds: bounds)
+    }
+
+    /// Ensures one specific walk has geometry, for a selection.
+    @MainActor
+    private func ensureOverlay(id: UUID) async {
+        guard !walkOverlays.contains(where: { $0.id == id }) else { return }
+        if let overlay = await makeOverlay(id: id) { walkOverlays.append(overlay) }
+    }
+
+    /// Cheap facts about a route, so cards and the hero can show distance and
+    /// point count before any geometry exists.
+    private struct RouteMeta {
+        let id: UUID
+        let bounds: GeoBounds
+        let pointCount: Int
+        let distance: Double
+        let startDate: Date
     }
 
     /// A selected walk is the only route on the map: the rest of the archive
@@ -969,8 +1062,13 @@ struct ContentView: View {
         switch feature {
         case .walks:
             // The archive is worldwide; open on the most recent route rather
-            // than zooming out to a globe of tiny lines.
-            points = walkOverlays.first.map { $0.coordinates.map { GeoCoordinate($0) } } ?? []
+            // than zooming out to a globe of tiny lines. Its bounds are enough
+            // to frame the camera — the geometry can arrive afterwards.
+            if let newest = routeIndex.values.max(by: { $0.startDate < $1.startDate }) {
+                points = newest.bounds.corners
+            } else {
+                points = walkOverlays.first.map { $0.coordinates.map { GeoCoordinate($0) } } ?? []
+            }
         case .places:
             // Keep the camera when it already shows places; proximity-sorted
             // cards below then match the map, and we avoid a continent jump and
@@ -1030,7 +1128,16 @@ struct ContentView: View {
         var snap = false
         switch selection {
         case .walk(let id):
-            points = (walkOverlays.first(where: { $0.id == id })?.coordinates ?? []).map { GeoCoordinate($0) }
+            if let overlay = walkOverlays.first(where: { $0.id == id }) {
+                points = overlay.coordinates.map { GeoCoordinate($0) }
+            } else if let meta = routeIndex[id] {
+                // Frame from the index and let the geometry arrive; a walk
+                // outside the loaded area must still open when picked.
+                points = meta.bounds.corners
+                Task { await ensureOverlay(id: id) }
+            } else {
+                points = []
+            }
         case .place(let id):
             points = tabs.places.places.first { $0.id == id }.map { [GeoCoordinate($0.coordinate)] } ?? []
         case .flight(let id):
@@ -1158,7 +1265,8 @@ struct ContentView: View {
                     HeroStat(id: "distance", label: "DISTANCE",
                              value: routeDistance(for: id).map { String(format: "%.1f km", $0 / 1_000) } ?? "—"),
                     HeroStat(id: "duration", label: "DURATION", value: "\(Int(walk.durationSeconds / 60)) min"),
-                    HeroStat(id: "points", label: "POINTS", value: "\(walkOverlays.first { $0.id == id }?.coordinates.count ?? 0)"),
+                    HeroStat(id: "points", label: "POINTS",
+                             value: "\(walkOverlays.first { $0.id == id }?.coordinates.count ?? routeIndex[id]?.pointCount ?? 0)"),
                 ]
             case .place(let id):
                 guard let place = tabs.places.places.first(where: { $0.id == id }) else { return [] }

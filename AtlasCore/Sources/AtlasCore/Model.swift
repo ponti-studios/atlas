@@ -106,9 +106,25 @@ public struct WalkRouteSummary: Identifiable, Hashable, Sendable, Codable {
     public let title: String?
     /// GPX activity type, e.g. "Walking", "Hiking", "Running".
     public let activity: String?
-    public init(id: UUID, startDate: Date, endDate: Date, hasGPSRoute: Bool, title: String? = nil, activity: String? = nil) {
+    /// Where the route lives, so the map can choose what to draw without
+    /// scanning every point at launch. Nil on archives built before this.
+    public let bounds: GeoBounds?
+    public let pointCount: Int?
+    public let distanceMeters: Double?
+    public init(
+        id: UUID,
+        startDate: Date,
+        endDate: Date,
+        hasGPSRoute: Bool,
+        title: String? = nil,
+        activity: String? = nil,
+        bounds: GeoBounds? = nil,
+        pointCount: Int? = nil,
+        distanceMeters: Double? = nil
+    ) {
         self.id = id; self.startDate = startDate; self.endDate = endDate
         self.hasGPSRoute = hasGPSRoute; self.title = title; self.activity = activity
+        self.bounds = bounds; self.pointCount = pointCount; self.distanceMeters = distanceMeters
     }
     public var durationSeconds: TimeInterval { max(0, endDate.timeIntervalSince(startDate)) }
 }

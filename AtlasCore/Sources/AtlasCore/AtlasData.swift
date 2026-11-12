@@ -177,10 +177,23 @@ public final class FileAtlasStore: AtlasDataSource {
     /// without restarting the app.
     private func applyHealthArchive() {
         guard let baseData else { return }
+        AtlasPerformance.shared.begin("health.decode")
         let health = HealthWalkArchive.load(from: healthArchiveURL)
+        AtlasPerformance.shared.end("health.decode")
         let merged = health.walks.isEmpty ? baseData : baseData.merged(with: health.snapshot)
         data = merged
         routes = Dictionary(merged.routes.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+
+        // An archive written before geometry facts existed is filled in once,
+        // off the main actor, so the next launch reads bounds instead of
+        // scanning every route.
+        let url = healthArchiveURL
+        if health.walks.contains(where: { $0.bounds == nil }) {
+            Task.detached(priority: .utility) {
+                guard let fixed = health.withGeometryFilled() else { return }
+                try? fixed.write(to: url)
+            }
+        }
     }
 
     /// Called by the Health sync once it has written the sidecar.

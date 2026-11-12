@@ -55,8 +55,23 @@ final class ViewportCullingTests: XCTestCase {
         XCTAssertFalse(bounds(lat: 34.05, lon: -118.25).intersects(viewport), "a Los Angeles walk is not on screen in London")
     }
 
-    func testRouteNearTheDatelineOverlapsAViewportThere() {
-        let fiji = GeoBounds(points: [
+    func testExpandedByKilometresGrowsEveryEdge() {
+        let base = bounds(lat: 51.5, lon: -0.12, spread: 0.01)
+        let grown = base.expanded(byKilometers: 50)
+        XCTAssertEqual(grown.minLatitude, base.minLatitude - 0.449, accuracy: 0.01, "50 km is about 0.45° of latitude")
+        XCTAssertEqual(grown.maxLatitude, base.maxLatitude + 0.449, accuracy: 0.01)
+        XCTAssertLessThan(grown.minLongitude, base.minLongitude)
+        XCTAssertGreaterThan(grown.maxLongitude, base.maxLongitude)
+    }
+
+    func testCornersFrameTheBounds() {
+        let base = bounds(lat: 51.5, lon: -0.12)
+        XCTAssertEqual(base.corners.count, 4)
+        XCTAssertEqual(base.corners.map(\.latitude).min(), base.minLatitude)
+        XCTAssertEqual(base.corners.map(\.longitude).max(), base.maxLongitude)
+    }
+
+    func testRouteNearTheDatelineOverlapsAViewportThere() {        let fiji = GeoBounds(points: [
             GeoCoordinate(latitude: -17.0, longitude: 179.9),
             GeoCoordinate(latitude: -17.1, longitude: -179.9),
         ])!

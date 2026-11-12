@@ -130,7 +130,7 @@ public final class AtlasPerformance: @unchecked Sendable {
         let report = report()
         let decode = report.stagesMS["snapshot.decode"] ?? -1
         let load = report.stagesMS["tabs.load"] ?? -1
-        let routes = report.stagesMS["routes.prepare"] ?? -1
+        let routes = report.stagesMS["routes.index"] ?? report.stagesMS["routes.prepare"] ?? -1
         let ready = report.stagesMS["app.ready"] ?? -1
         NSLog(
             "Atlas perf: decode %.0f ms · tabs %.0f ms · routes %.0f ms · ready %.0f ms · footprint %.0f MB",

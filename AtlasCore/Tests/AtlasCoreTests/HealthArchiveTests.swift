@@ -47,6 +47,33 @@ final class HealthArchiveTests: XCTestCase {
         XCTAssertEqual(archive.routes[0].locations.count, 12)
     }
 
+    func testSummaryCarriesGeometrySoLaunchDoesNotScan() {
+        let archive = HealthWalkArchive.merging([workout(points: 12)], into: HealthWalkArchive())
+        let walk = archive.walks[0]
+        XCTAssertNotNil(walk.bounds, "the map needs bounds without reading the route")
+        XCTAssertEqual(walk.pointCount, 12)
+        XCTAssertNotNil(walk.distanceMeters)
+        XCTAssertGreaterThan(walk.distanceMeters ?? 0, 0)
+    }
+
+    func testBackfillRepairsAnArchiveWrittenBeforeGeometryFacts() {
+        let archive = HealthWalkArchive.merging([workout(points: 5)], into: HealthWalkArchive())
+        let legacy = HealthWalkArchive(
+            walks: [WalkRouteSummary(id: archive.walks[0].id,
+                                     startDate: archive.walks[0].startDate,
+                                     endDate: archive.walks[0].endDate,
+                                     hasGPSRoute: true)],
+            routes: archive.routes
+        )
+        XCTAssertNil(legacy.walks[0].bounds)
+
+        let filled = legacy.withGeometryFilled()
+        XCTAssertNotNil(filled)
+        XCTAssertNotNil(filled?.walks[0].bounds)
+        XCTAssertEqual(filled?.walks[0].pointCount, 5)
+        XCTAssertNil(filled?.withGeometryFilled(), "a repaired archive needs no second pass")
+    }
+
     func testWorkoutWithoutRouteStaysInTheList() {
         let archive = HealthWalkArchive.merging([workout(points: 0)], into: HealthWalkArchive())
         XCTAssertEqual(archive.walks.count, 1, "a walk recorded without location still happened")

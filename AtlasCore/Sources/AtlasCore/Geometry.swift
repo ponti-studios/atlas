@@ -54,6 +54,30 @@ public struct GeoBounds: Codable, Hashable, Sendable {
             && maxLongitude >= other.minLongitude
             && other.maxLongitude >= minLongitude
     }
+
+    /// Grows the bounds by a distance, so "near the viewport" can mean fifty
+    /// kilometres of margin rather than a fraction of the zoom level.
+    public func expanded(byKilometers kilometres: Double) -> GeoBounds {
+        let latitudePad = kilometres / 111.32
+        let midLatitude = (minLatitude + maxLatitude) / 2
+        let longitudePad = latitudePad / max(0.15, cos(midLatitude * .pi / 180))
+        return GeoBounds(
+            minLatitude: max(-90, minLatitude - latitudePad),
+            maxLatitude: min(90, maxLatitude + latitudePad),
+            minLongitude: max(-180, minLongitude - longitudePad),
+            maxLongitude: min(180, maxLongitude + longitudePad)
+        )
+    }
+
+    /// The four corners, for framing a camera on bounds without its geometry.
+    public var corners: [GeoCoordinate] {
+        [
+            GeoCoordinate(latitude: minLatitude, longitude: minLongitude),
+            GeoCoordinate(latitude: minLatitude, longitude: maxLongitude),
+            GeoCoordinate(latitude: maxLatitude, longitude: minLongitude),
+            GeoCoordinate(latitude: maxLatitude, longitude: maxLongitude),
+        ]
+    }
 }
 
 public enum RouteGeometry {
