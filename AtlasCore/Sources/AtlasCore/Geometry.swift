@@ -33,6 +33,27 @@ public struct GeoBounds: Codable, Hashable, Sendable {
         self.maxLongitude = maxLongitude
     }
 
+    /// A viewport expressed as bounds, with a margin so a route that only
+    /// crosses the edge of the screen is still drawn.
+    public static func viewport(center: GeoCoordinate, latitudeDelta: Double, longitudeDelta: Double, margin: Double = 0.15) -> GeoBounds {
+        let latitudePad = max(latitudeDelta, 1e-6) * (0.5 + margin)
+        let longitudePad = max(longitudeDelta, 1e-6) * (0.5 + margin)
+        return GeoBounds(
+            minLatitude: max(-90, center.latitude - latitudePad),
+            maxLatitude: min(90, center.latitude + latitudePad),
+            minLongitude: max(-180, center.longitude - longitudePad),
+            maxLongitude: min(180, center.longitude + longitudePad)
+        )
+    }
+
+    /// Overlap test. Bounds are always normalised (min ≤ max), so this is a
+    /// plain interval test on both axes.
+    public func intersects(_ other: GeoBounds) -> Bool {
+        maxLatitude >= other.minLatitude
+            && other.maxLatitude >= minLatitude
+            && maxLongitude >= other.minLongitude
+            && other.maxLongitude >= minLongitude
+    }
 }
 
 public enum RouteGeometry {

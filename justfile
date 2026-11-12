@@ -173,6 +173,7 @@ doctor:
 
 # Build, install and launch on the booted simulator
 sim:
+    @test -n "{{sim}}" || { echo "no booted iPhone simulator. Boot one in Device Hub, then re-run."; exit 1; }
     xcodebuild -project {{proj}} -scheme 'Atlas iOS' -configuration Release -destination 'id={{sim}}' -derivedDataPath .build/dd-ios build
     -xcrun simctl terminate booted io.ponti.atlas.ios
     xcrun simctl install booted ".build/dd-ios/Build/Products/Release-iphonesimulator/Atlas iOS.app"

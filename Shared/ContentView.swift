@@ -23,6 +23,8 @@ struct ContentView: View {
     @State private var sidebarOpen = false
     /// Live horizontal drag on the phone drawer; negative is towards closed.
     @State private var drawerDrag: CGFloat = 0
+    /// Downward drag on the walk card; past the threshold it clears the selection.
+    @State private var cardDrag: CGFloat = 0
     /// The six section tiles arrive after the drawer has landed.
     @State private var drawerSectionsVisible = false
     @FocusState private var searchFocused: Bool
@@ -140,6 +142,9 @@ struct ContentView: View {
                         }
                         Spacer(minLength: 2)
                     }
+                    .offset(y: cardDrag * 0.45)
+                    .opacity(1 - min(0.45, cardDrag / 420))
+                    .gesture(dismissSelectedWalk)
                 }
                 .padding(compact ? 12 : 18)
                 #if os(macOS)
@@ -198,6 +203,23 @@ struct ContentView: View {
                         sidebarOpen = false
                         drawerSectionsVisible = false
                     }
+                }
+            }
+    }
+
+    /// Swipe the card down to put the whole archive back on the map. Only a
+    /// selected walk listens, and the card follows the finger while it moves.
+    private var dismissSelectedWalk: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                guard case .walk = selection, value.translation.height > 0 else { return }
+                cardDrag = value.translation.height
+            }
+            .onEnded { value in
+                let closes = value.translation.height > 70 || value.predictedEndTranslation.height > 160
+                withAnimation(.snappy(duration: 0.26)) {
+                    cardDrag = 0
+                    if closes, case .walk = selection { selection = nil }
                 }
             }
     }

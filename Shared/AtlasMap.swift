@@ -182,6 +182,7 @@ struct AtlasMapCanvas: View {
             routes.append(RenderedRoute(
                 id: overlay.id,
                 coordinates: isSelected ? overlay.coordinates : overlay.simplified,
+                bounds: overlay.bounds,
                 isSelected: isSelected
             ))
         }
@@ -319,7 +320,10 @@ struct AtlasMapCanvas: View {
     private var content: some MapContent {
         switch feature {
         case .walks:
-            ForEach(renderedRoutes) { route in
+            // Only the routes that touch the viewport are handed to MapKit.
+            // With a thousand walks, most are thousands of kilometres away and
+            // cost nothing to skip.
+            ForEach(routesInView) { route in
                 if route.isSelected {
                     MapPolyline(coordinates: route.coordinates)
                         .stroke(AtlasTheme.lime.opacity(0.32), lineWidth: 13)
@@ -419,6 +423,18 @@ struct AtlasMapCanvas: View {
 
     // MARK: - Derived content
 
+    /// Routes that can actually be seen right now. Recomputed when the camera
+    /// settles (not during the gesture), so panning stays smooth.
+    private var routesInView: [RenderedRoute] {
+        let region = map.state.region
+        let viewport = GeoBounds.viewport(
+            center: region.center,
+            latitudeDelta: region.latitudeDelta,
+            longitudeDelta: region.longitudeDelta
+        )
+        return renderedRoutes.filter { $0.isSelected || $0.bounds.intersects(viewport) }
+    }
+
     /// Roughly 3 screen pixels at any zoom, derived from the latitude span.
     private var placeDotRadius: CLLocationDistance {
         max(4, map.state.region.latitudeDelta * 420)
@@ -462,6 +478,7 @@ struct WalkOverlay: Identifiable {
 struct RenderedRoute: Identifiable {
     let id: UUID
     let coordinates: [CLLocationCoordinate2D]
+    let bounds: GeoBounds
     let isSelected: Bool
 }
 
