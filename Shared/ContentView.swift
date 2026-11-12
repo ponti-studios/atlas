@@ -96,7 +96,7 @@ struct ContentView: View {
                 map: map,
                 feature: feature,
                 selection: selection,
-                walkOverlays: walkOverlays,
+                walkOverlays: visibleWalkOverlays,
                 focusFlightID: focusFlight?.id,
                 onSelect: select
             )
@@ -932,6 +932,14 @@ struct ContentView: View {
                   let coordinates = overlays.first(where: { $0.id == id })?.coordinates {
             map.focus(on: coordinates.map { GeoCoordinate($0) }, padding: 1.85)
         }
+    }
+
+    /// A selected walk is the only route on the map: the rest of the archive
+    /// steps aside until the selection is cleared, so the line you picked is
+    /// not one of a thousand overlapping others.
+    private var visibleWalkOverlays: [WalkOverlay] {
+        guard case .walk(let id)? = selection else { return walkOverlays }
+        return walkOverlays.filter { $0.id == id }
     }
 
     private func focusActive(animated: Bool = true) {
