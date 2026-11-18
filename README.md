@@ -191,6 +191,13 @@ biased towards the middle of the map without being restricted to it, so
 control; saving adds the place to Atlas's places, pins it on the map, and
 survives a relaunch.
 
+The same Apple Maps search is available from the command line:
+
+```sh
+just geocode "Paris, France"
+just geocode "coffee near Apple Park" --limit 3
+```
+
 Two rules keep the archive honest:
 
 - **Identity is the place, not the row.** A result's id is a hash of its name

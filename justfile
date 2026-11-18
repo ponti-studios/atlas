@@ -46,6 +46,10 @@ repl:
 cams:
     cd {{core}} && .build/debug/atlas-cli cams --limit 20
 
+# Search Apple Maps and print place results as JSON
+geocode QUERY *ARGS:
+    cd {{core}} && .build/debug/atlas-cli geocode {{ARGS}} {{QUERY}}
+
 # ---------------------------------------------------------------------------
 # Real data
 # ---------------------------------------------------------------------------

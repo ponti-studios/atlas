@@ -1,5 +1,6 @@
 import Foundation
 import CoreLocation
+import PlaceCore
 
 // MARK: - Walks ViewModel (ported)
 
@@ -181,7 +182,10 @@ public final class PlacesViewModel: ObservableObject {
         }
         state.isSearching = true
         do {
-            let found = try await searcher.search(trimmed, near: near, limit: limit)
+            let placeNear = near.map {
+                PlaceCoordinate(latitude: $0.latitude, longitude: $0.longitude)
+            }
+            let found = try await searcher.search(trimmed, near: placeNear, limit: limit)
             guard token == searchToken else { return }
             state.results = found
             state.isSearching = false
@@ -214,7 +218,18 @@ public final class PlacesViewModel: ObservableObject {
     /// it — the archive and Apple rarely agree on the last decimal of a
     /// coordinate.
     public func resolvedPlace(for result: PlaceSearchResult) -> Place {
-        let fresh = result.makePlace()
+        let fresh = Place(
+            id: StableID.uuid(result.id),
+            name: result.name,
+            coordinate: CLLocationCoordinate2D(
+                latitude: result.latitude,
+                longitude: result.longitude
+            ),
+            note: [result.category, result.address]
+                .filter { !$0.isEmpty }
+                .joined(separator: " · "),
+            createdAt: .now
+        )
         guard let existing = existingMatch(for: result) else { return fresh }
         return Place(
             id: existing.id,
@@ -248,7 +263,8 @@ public final class PlacesViewModel: ObservableObject {
 
     /// Whether a result is already in the saved list.
     public func isSaved(_ result: PlaceSearchResult) -> Bool {
-        existingMatch(for: result) != nil || state.places.contains { $0.id == result.makePlace().id }
+        existingMatch(for: result) != nil
+            || state.places.contains { $0.id == StableID.uuid(result.id) }
     }
 
     public func clearResults() {

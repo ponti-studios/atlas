@@ -8,8 +8,18 @@ let package = Package(
         .library(name: "AtlasCore", targets: ["AtlasCore"]),
         .executable(name: "atlas-cli", targets: ["AtlasCLI"]),
     ],
+    dependencies: [
+        .package(path: "../../hominem-swift"),
+    ],
     targets: [
-        .target(name: "AtlasCore", path: "Sources/AtlasCore"),
+        .target(
+            name: "AtlasCore",
+            dependencies: [
+                .product(name: "WalksCore", package: "hominem-swift"),
+                .product(name: "PlaceCore", package: "hominem-swift"),
+            ],
+            path: "Sources/AtlasCore"
+        ),
         .executableTarget(name: "AtlasCLI", dependencies: ["AtlasCore"], path: "Sources/AtlasCLI"),
         .testTarget(name: "AtlasCoreTests", dependencies: ["AtlasCore"], path: "Tests/AtlasCoreTests"),
     ],

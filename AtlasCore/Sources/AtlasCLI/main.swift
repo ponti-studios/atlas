@@ -1,4 +1,5 @@
 import Foundation
+import PlaceCore
 import AtlasCore
 
 @main
@@ -14,6 +15,11 @@ struct AtlasCLI {
 
         if arguments.first == "bench" {
             await runBench(Array(arguments.dropFirst()))
+            return
+        }
+
+        if arguments.first == "geocode" {
+            await runGeocode(Array(arguments.dropFirst()))
             return
         }
 
@@ -106,6 +112,58 @@ struct AtlasCLI {
     }
 
     // MARK: - Benchmark
+
+    @MainActor
+    static func runGeocode(_ arguments: [String]) async {
+        var limit = 1
+        var queryParts: [String] = []
+        var index = 0
+
+        while index < arguments.count {
+            let argument = arguments[index]
+            if argument == "--limit" || argument == "-l" {
+                guard index + 1 < arguments.count,
+                      let parsed = Int(arguments[index + 1]),
+                      parsed > 0 else {
+                    print("error: --limit must be a positive integer")
+                    print("usage: atlas-cli geocode [--limit N] <query>")
+                    return
+                }
+                limit = parsed
+                index += 2
+            } else if argument == "--help" || argument == "-h" {
+                print("usage: atlas-cli geocode [--limit N] <query>")
+                print("example: atlas-cli geocode --limit 3 \"coffee near Apple Park\"")
+                return
+            } else if argument.hasPrefix("-") {
+                print("error: unknown option: \(argument)")
+                print("usage: atlas-cli geocode [--limit N] <query>")
+                return
+            } else {
+                queryParts.append(argument)
+                index += 1
+            }
+        }
+
+        let query = queryParts.joined(separator: " ").trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            print("error: missing search query")
+            print("usage: atlas-cli geocode [--limit N] <query>")
+            return
+        }
+
+        do {
+            let results = try await MapKitPlaceSearch().search(query, near: nil, limit: limit)
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+            let data = try encoder.encode(results)
+            if let json = String(data: data, encoding: .utf8) {
+                print(json)
+            }
+        } catch {
+            print("error: \(error.localizedDescription)")
+        }
+    }
 
     @MainActor
     static func runBench(_ arguments: [String]) async {

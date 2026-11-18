@@ -1,4 +1,5 @@
 import Foundation
+import PlaceCore
 
 public struct IntrospectionAction {
     public let title: String

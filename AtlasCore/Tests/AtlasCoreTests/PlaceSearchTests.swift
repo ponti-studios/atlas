@@ -1,4 +1,5 @@
 import XCTest
+import PlaceCore
 import CoreLocation
 @testable import AtlasCore
 
@@ -8,7 +9,7 @@ private struct StubSearcher: PlaceSearching {
     var results: [PlaceSearchResult] = []
     var error: Error?
 
-    func search(_ query: String, near: GeoCoordinate?, limit: Int) async throws -> [PlaceSearchResult] {
+    func search(_ query: String, near: PlaceCoordinate?, limit: Int) async throws -> [PlaceSearchResult] {
         if let error { throw error }
         return Array(results.prefix(limit))
     }
@@ -130,7 +131,6 @@ final class PlaceSearchTests: XCTestCase {
         let b = PlaceSearchResult(name: "Blue Bottle", address: "1 Test Street", category: "cafe",
                                   coordinate: CLLocationCoordinate2D(latitude: 51.5000002, longitude: -0.1000002))
         XCTAssertEqual(a.id, b.id)
-        XCTAssertEqual(a.makePlace().id, b.makePlace().id)
     }
 
     func testDifferentPlacesHaveDifferentIdentities() {
@@ -139,7 +139,6 @@ final class PlaceSearchTests: XCTestCase {
         let b = PlaceSearchResult(name: "Blue Bottle", address: "", category: "",
                                   coordinate: CLLocationCoordinate2D(latitude: 51.6, longitude: -0.1))
         XCTAssertNotEqual(a.id, b.id)
-        XCTAssertNotEqual(a.makePlace().id, b.makePlace().id)
     }
 }
 
