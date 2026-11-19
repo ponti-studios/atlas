@@ -9,7 +9,10 @@ let package = Package(
         .executable(name: "atlas-cli", targets: ["AtlasCLI"]),
     ],
     dependencies: [
-        .package(path: "../../hominem-swift"),
+        .package(
+            url: "https://github.com/ponti-studios/hominem-swift",
+            from: "0.0.6"
+        ),
     ],
     targets: [
         .target(
