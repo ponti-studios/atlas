@@ -2,6 +2,27 @@ import Foundation
 import CoreLocation
 import CryptoKit
 
+private enum CSVValue {
+    static func double(_ raw: String?) -> Double? {
+        guard let raw else { return nil }
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        return Double(trimmed)
+    }
+
+    static func coordinate(latitude: String?, longitude: String?) -> GeoCoordinate? {
+        guard let latitude = double(latitude),
+              let longitude = double(longitude) else {
+            return nil
+        }
+        let coordinate = GeoCoordinate(
+            latitude: latitude,
+            longitude: longitude
+        )
+        return coordinate.isValid ? coordinate : nil
+    }
+}
+
 public struct AtlasImportReport: Sendable {
     public let walks: Int
     public let routes: Int

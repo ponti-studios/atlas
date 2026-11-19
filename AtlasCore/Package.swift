@@ -17,6 +17,11 @@ let package = Package(
             dependencies: [
                 .product(name: "WalksCore", package: "hominem-swift"),
                 .product(name: "PlaceCore", package: "hominem-swift"),
+                .product(name: "GeoCore", package: "hominem-swift"),
+                .product(name: "UtilityCore", package: "hominem-swift"),
+                .product(name: "FlightCore", package: "hominem-swift"),
+                .product(name: "ParcelCore", package: "hominem-swift"),
+                .product(name: "TransitCore", package: "hominem-swift"),
             ],
             path: "Sources/AtlasCore"
         ),

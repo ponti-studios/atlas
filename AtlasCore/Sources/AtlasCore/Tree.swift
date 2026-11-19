@@ -1,4 +1,5 @@
 import Foundation
+import TransitCore
 import Combine
 
 public final class IntrospectionTree {

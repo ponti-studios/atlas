@@ -382,7 +382,7 @@ struct AtlasMapCanvas: View {
         case .parcels:
             ForEach(tabs.parcels.parcels) { parcel in
                 if let location = parcel.lastLocation {
-                    Annotation(coordinate: location, anchor: .center) {
+                    Annotation(coordinate: location.coordinate, anchor: .center) {
                         ParcelPin(parcel: parcel, isSelected: selection == .parcel(parcel.id))
                             .onTapGesture { onSelect(.parcel(parcel.id)) }
                     } label: {
@@ -393,7 +393,7 @@ struct AtlasMapCanvas: View {
 
         case .tfl:
             ForEach(tabs.tfl.stations) { station in
-                Annotation(coordinate: station.coordinate, anchor: .center) {
+                Annotation(coordinate: station.coordinate.coordinate, anchor: .center) {
                     StationPin(station: station, isSelected: selection == .station(station.id))
                         .onTapGesture { onSelect(.station(station.id)) }
                 } label: {
